@@ -1,0 +1,68 @@
+/*++
+
+Copyright (c) 1997-1998  Microsoft Corporation
+
+Module Name:
+
+    GUID.h
+
+Abstract:
+
+ The below GUID is used to generate symbolic links to
+  driver instances created from user mode
+
+Environment:
+
+    Kernel & user mode
+
+Revision History:
+
+    11/18/97 : created
+    11/21/01 : changed for SEC SOC
+
+--*/
+#ifndef GUID_INC
+#define GUID_INC
+
+#include <initguid.h>
+
+/*
+// {00873FDF-61A8-11d1-AA5E-00C04FB1728B}  for BULKUSB.SYS
+DEFINE_GUID(GUID_CLASS_I82930_BULK, 
+0x873fdf, 0x61a8, 0x11d1, 0xaa, 0x5e, 0x0, 0xc0, 0x4f, 0xb1, 0x72, 0x8b);
+*/
+
+//New GUID by purnnamu
+// {8E120C45-4968-4188-BA19-9A82361C8FA8}
+
+DEFINE_GUID(GUID_CLASS_I82930_BULK, 0x8e120c45, 0x4968, 0x4188, 0xba, 0x19, 0x9a, 0x82, 0x36, 0x1c, 0x8f, 0xa8);
+
+DEFINE_GUID(GUID_CLASS_S3C2443X_BULK, 0x8715c3bf, 0x4949, 0x4260, 0x90, 0xf1, 0xa2, 0xaa, 0x1d, 0xeb, 0xfb, 0x90);
+
+// 2017.08.16, MesBulk2 GUID by Edward
+// Comeback to Original BULKUSB.SYS's GUID 
+DEFINE_GUID(GUID_CLASS_I82930_MES_BULK, 0x873fdf, 0x61a8, 0x11d1, 0xaa, 0x5e, 0x0, 0xc0, 0x4f, 0xb1, 0x72, 0x8b);
+
+
+
+#ifdef __USB_GUID_____
+/* f18a0e88-c30c-11d0-8815-00a0c906bed8 */
+DEFINE_GUID(GUID_DEVINTERFACE_USB_HUB, 0xf18a0e88, 0xc30c, 0x11d0, 0x88, 0x15, 0x00, 0xa0, 0xc9, 0x06, 0xbe, 0xd8);
+
+/* A5DCBF10-6530-11D2-901F-00C04FB951ED */
+DEFINE_GUID(GUID_DEVINTERFACE_USB_DEVICE, 0xA5DCBF10L, 0x6530, 0x11D2, 0x90, 0x1F, 0x00, 0xC0, 0x4F, 0xB9, 0x51, 0xED);
+
+/* 3ABF6F2D-71C4-462a-8A92-1E6861E6AF27 */
+DEFINE_GUID(GUID_DEVINTERFACE_USB_HOST_CONTROLLER, 0x3abf6f2d, 0x71c4, 0x462a, 0x8a, 0x92, 0x1e, 0x68, 0x61, 0xe6, 0xaf, 0x27);
+
+/* 4E623B20-CB14-11D1-B331-00A0C959BBD2 */
+DEFINE_GUID(GUID_USB_WMI_STD_DATA, 0x4E623B20L, 0xCB14, 0x11D1, 0xB3, 0x31, 0x00, 0xA0, 0xC9, 0x59, 0xBB, 0xD2);
+
+/* 4E623B20-CB14-11D1-B331-00A0C959BBD2 */
+DEFINE_GUID(GUID_USB_WMI_STD_NOTIFICATION, 0x4E623B20L, 0xCB14, 0x11D1, 0xB3, 0x31, 0x00, 0xA0, 0xC9, 0x59, 0xBB, 0xD2); 
+#endif /////////
+
+
+
+#endif // end, #ifndef GUID_INC
+

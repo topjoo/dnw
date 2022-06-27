@@ -1,0 +1,11 @@
+;-----------------------------------------
+; AVN script 
+;-----------------------------------------
+[START] 
+[DO] 
+[sleep] 100  
+[char]reboot 
+[SLEEP] 10000 
+[char]logcat -v time -s VideoWidget 
+[sleep] 45000 [hexa] 03 ; CTRL+C value[WHILE] 10000 
+[END] 

@@ -1,0 +1,477 @@
+// ------------------------------------------------------------
+// Project : 17CY MEU
+//
+// Queue.c
+//------------------------------------------------------------
+// Revision History
+// 1) 2015.11.16 : Circular Queue by top.joo
+//
+//
+//
+//
+//
+//------------------------------------------------------------
+//
+//
+
+#include <stdio.h>
+#include <malloc.h>
+
+#define FALSE 	0
+#define TRUE 	1
+
+#define USE_CIRCULAR_QUEUE 				1 // 2015.11.14
+#define USE_LINKED_LIST_QUEUE 			1 // 2015.11.14
+
+
+#ifdef USE_CIRCULAR_QUEUE
+
+#define MAX_ACM_DATA_SIZE 				(1024) // ACM Packet size
+#define MAX_QUEUE_SIZE 					(30) // Circular Queue Size 
+// ----------------------------------------------------
+// Circular Queue structure
+// ----------------------------------------------------
+typedef unsigned char BYTE;
+typedef struct {
+	BYTE *CQdata[MAX_QUEUE_SIZE];
+	int qsiz; // -- Queue size
+	int head; // -- Dequeue-
+	int tail; // -- Enqueue-
+} ctQueue;
+
+
+
+//------------------------------
+// DCU to MEU Queue 
+//------------------------------
+ctQueue dcu2meu;
+
+//------------------------------
+// MEU to DCU Queue 
+//------------------------------
+//ctQueue meu2DCU;
+
+
+
+// --------------------------------------------------------
+// Intialized Circular Queue
+// --------------------------------------------------------
+void InitCQueue(ctQueue *pArr, int Size)
+{
+	int idx = 0;
+
+	if( NULL==pArr )
+	{
+		printf("InitCQueue is NULL +++ Size(%d)  \r\n", Size );
+		return;
+	}
+
+	pArr->qsiz = Size; 
+	pArr->head = pArr->tail = 0;
+
+	for(idx=0; idx<Size; idx++)
+	{
+		pArr->CQdata[idx] = (BYTE*)malloc( MAX_ACM_DATA_SIZE*sizeof(BYTE) );
+	}
+}
+
+
+// --------------------------------------------------------
+// Destoty Circular Queue
+// --------------------------------------------------------
+void UnCQueue(ctQueue *pArr, int Size)
+{
+	int idx = 0;
+
+	if( NULL==pArr )
+	{
+		printf("UnCQueue is NULL +++ Size(%d), pArr->qsiz(%d) \r\n", Size, pArr->qsiz );
+		return;
+	}
+
+	pArr->head = pArr->tail = 0;
+	
+	for(idx=0; idx<Size; idx++)
+		free(pArr->CQdata[idx]);
+
+}
+
+
+// --------------------------------------------------------
+// Check full Circular Queue
+// --------------------------------------------------------
+int FullCQueue(ctQueue *pArr)
+{
+	return ( (pArr->tail+1)%pArr->qsiz == pArr->head );
+}
+
+
+// --------------------------------------------------------
+// Circular EnQueue
+// --------------------------------------------------------
+int EnCQueue(ctQueue *pArr, BYTE *indata, int length)
+{
+	int iLength = 0;
+
+	if( NULL==pArr || NULL==indata || FullCQueue(pArr) )
+	{
+		printf("EnCQueue full error+++ length(%d), pArr->qsiz(%d) \r\n", length, pArr->qsiz );
+		return -1;
+	}
+
+
+	if( length > MAX_ACM_DATA_SIZE )
+	{
+		printf("EnCQueue Qbuffer overflow +++ length(%d) \r\n", length  );
+
+		iLength = length;
+	}
+	else
+	{
+		pArr->tail = (pArr->tail+1) % pArr->qsiz;
+
+		//pArr->CQdata[pArr->tail] = indata;
+		memset( (void*)pArr->CQdata[pArr->tail], 0x00, MAX_ACM_DATA_SIZE );
+		memcpy( (void*)pArr->CQdata[pArr->tail], (void*)indata, length);
+
+		iLength = length;
+	}
+	// Inserted Count
+	// return pArr->CQdata[pArr->tail];
+	return iLength; // EnQueued string length
+}
+
+
+// --------------------------------------------------------
+// Check empty Circular Queue
+// --------------------------------------------------------
+int EmptyCQueue(ctQueue *pArr)
+{
+	if( NULL==pArr )
+	{
+		printf("EmptyCQueue pArr NULL +++ \r\n");
+		return -1;
+	}
+	
+	// empty Queue when head is same to tail
+	return (pArr->head == pArr->tail);
+}
+
+
+// --------------------------------------------------------
+// Circular DeQueue
+// --------------------------------------------------------
+BYTE* DeCQueue(ctQueue *pArr)
+{
+	BYTE *outData = NULL;
+
+	if( NULL==pArr || EmptyCQueue(pArr) )
+	{
+		printf("DeCQueue Empty Queue +++ pArr->qsiz (%d) \r\n", pArr->qsiz );
+		return NULL;
+	}
+
+	pArr->head = (pArr->head+1) % pArr->qsiz;
+	outData = pArr->CQdata[pArr->head]; 
+	return outData;
+}
+
+
+// --------------------------------------------------------
+// Circular Peek Queue
+// --------------------------------------------------------
+BYTE* PeekCQueue(ctQueue *pArr)
+{
+	if( NULL==pArr || EmptyCQueue(pArr) )
+	{
+		printf("PeekCQueue Empty Queue +++ \r\n");
+		return NULL;
+	}
+
+	return pArr->CQdata[ (pArr->head+1)%pArr->qsiz ];
+}
+#endif // USE_CIRCULAR_QUEUE
+
+
+#ifdef USE_LINKED_LIST_QUEUE 
+
+
+//typedef unsigned char 	BYTE;
+
+typedef struct tagNode {
+	BYTE 	Qdata[MAX_ACM_DATA_SIZE];
+	int 	Qsize;
+	struct 	tagNode* nextNode;
+} tllNODE;
+
+
+typedef struct tagQueue {
+	tllNODE 		*head; // DeQueue
+	tllNODE 		*tail;   // EnQueue
+	unsigned int 	Qcount;
+} tllQUEUE;
+
+
+
+
+// Create Linked List Queue
+void CreateQueue(tllQUEUE** Queue)
+{
+	(*Queue) = (tllQUEUE *)malloc ( sizeof(tllQUEUE) );
+
+	(*Queue)->head = NULL;
+	(*Queue)->tail = NULL;
+	(*Queue)->Qcount = 0;
+}
+
+
+
+// Create Queue Node
+tllNODE* CreateNode( BYTE inData[] )
+{
+	tllNODE* newNode = (tllNODE *)malloc( sizeof(tllNODE) );
+
+	newNode->Qsize = strlen(inData);
+	strcpy( newNode->Qdata, inData);
+
+	newNode->nextNode = NULL;
+
+	return newNode;
+}
+
+
+
+int isEmptyQueue(tllQUEUE* Queue)
+{
+	// If head is NULL, empty
+	return( NULL==Queue->head );
+}
+
+
+int isFullQueue(tllQUEUE* Queue)
+{
+	if( NULL==Queue )
+		return -1;
+
+	return 1;
+}
+
+
+void EnQueue( tllQUEUE *Queue, BYTE inData[] )
+{
+	
+	//if( NULL==Queue->head )
+	if( isEmptyQueue(Queue) )
+	{
+		// if empty, create new queue. 
+		Queue->head = CreateNode(inData);
+		Queue->tail = Queue->head;
+	}
+	else
+	{
+		// if no empty, tail index increased. 
+		Queue->tail->nextNode = CreateNode(inData);
+		Queue->tail = Queue->tail->nextNode;
+	}
+	Queue->Qcount++;
+
+}
+
+
+
+tllNODE* DeQueue(tllQUEUE* Queue)
+{
+	tllNODE* outNode = Queue->head;
+
+	if( NULL==outNode || NULL==Queue )
+		return NULL;
+
+	
+	if( NULL==Queue->head->nextNode )
+	{
+		Queue->head = NULL;
+		Queue->tail = NULL;
+	}
+	else
+	{
+		Queue->head = Queue->head->nextNode;
+	}
+
+	Queue->Qcount--;
+
+	// head index
+	return outNode;
+}
+
+
+BYTE *PeekQueue(tllQUEUE* Queue)
+{
+	if( NULL==Queue )
+	{
+		printf("PeekQueue: Queue is NULL +++++ \n");
+		return NULL;
+	}
+	
+	if( isEmptyQueue(Queue) )
+	{
+		printf("PeekQueue: empry queue ++++++++ \n");
+		return NULL;
+	}
+	else
+	{
+		return Queue->head->Qdata;
+	}
+}
+
+void printQueue(tllNODE* outNode)
+{
+	printf("Linked DeQ data: [%s] size(%d) \n", outNode->Qdata, outNode->Qsize );
+	free(outNode);
+}
+
+#endif // USE_LINKED_LIST_QUEUE 
+
+
+
+
+
+int main()
+{
+	BYTE buf[MAX_ACM_DATA_SIZE]={0,};
+	int len;
+	int i=0;
+	
+
+	tllQUEUE* Queue=NULL;
+	tllNODE*  outNode=malloc( sizeof(tllNODE) );
+
+	//LLQueueType llqq;
+	int initem;
+
+
+	// -----------------------------
+	// --- Circular Queue Test
+	// -----------------------------
+
+	memset( buf, 0x00, sizeof(buf) );
+
+	// intialized Circular Queue for dcu2meu
+	InitCQueue(&dcu2meu, MAX_QUEUE_SIZE );
+
+	printf("sizeof : %d, %d  \n", sizeof(dcu2meu.CQdata), sizeof(dcu2meu));
+	while(1)
+	{
+		printf("------------------------------------------------------\n");
+		printf("Circle Queue:: [1:enQ], [2:DeQ], [3:peek], [4:UnQ] >> ");
+		scanf("%d",&i);
+		switch(i)
+		{
+		case 1:
+			// EnQueue 하기 전에 Queue full 확인 ---
+			if( FullCQueue(&dcu2meu) )
+			{
+				printf("EnQ full +++++++++ \n");
+			}
+			else
+			{
+				printf("EnQ data: ");
+				scanf("%s", buf);
+				len = strlen(buf);
+				printf("EnQ length: [%d]\n", EnCQueue(&dcu2meu, buf, len ));
+				printf("EnQ head = %d, tail = %d\n",dcu2meu.head, dcu2meu.tail);
+			}
+			break;
+		case 2:
+			// DeQueue 하기 전에 Queue empty 확인 ---
+			if( EmptyCQueue(&dcu2meu) )
+			{
+				printf("DeQ Empty Queue +++++++++ \n");
+			}
+			else
+			{
+				printf("DeQ data: [%s] \n",DeCQueue(&dcu2meu));
+				printf("DeQ head = %d, tail = %d\n",dcu2meu.head, dcu2meu.tail);
+			}
+			break;
+
+		case 3:
+			printf("peek data: [%s]\n",PeekCQueue(&dcu2meu));
+			printf("peek head = %d, tail = %d\n",dcu2meu.head, dcu2meu.tail);
+			break;
+
+		case 4:
+			// Destory --
+			UnCQueue(&dcu2meu, MAX_QUEUE_SIZE);
+			printf("Destory Circle Queue \n" );
+			// return 0;
+			break;
+		}
+		if( i==4 ) break;
+	}
+
+
+
+	// -----------------------------
+	// --- Linked List Queue Test
+	// -----------------------------
+
+	memset( buf, 0x00, sizeof(buf) );
+
+
+	// ------------------------------------
+	// -- Iniialized Linked-List Queue
+	// ------------------------------------
+	CreateQueue(&Queue);
+
+	//printf("Inital LLQueue >> head : %d, tail %d\n\n",llqq.head, llqq.tail);
+	while(1)
+	{
+		printf("------------------------------------------------------\n");
+		printf("Linked Queue:: [1:enQ], [2:DeQ], [3:peek], [4:UnQ] >> ");
+		scanf("%d",&i);
+		switch(i)
+		{
+		case 1:
+			printf("Linked EnQ data: ");
+			scanf("%s", buf);
+			len = strlen(buf);
+			EnQueue(Queue, buf );
+			printf("stored data: [%s] length: [%d], Qcount(%d) \n", buf, len, Queue->Qcount );
+			break;
+		
+		case 2:
+			if( isEmptyQueue(Queue) )
+			{
+				printf("Linked DeQ data: empty (Qcount:%d) +++++ \n", Queue->Qcount);
+			}
+			else
+			{
+				outNode = DeQueue(Queue);
+				printf("Linked DeQ data: [%s] size(%d), Qcount(%d) \n", outNode->Qdata, outNode->Qsize, Queue->Qcount );
+				if(outNode) free(outNode);
+			}
+			break;
+
+		case 3:
+			printf("Linked peek data: [%s] Qcount(%d) \n", PeekQueue(Queue), Queue->Qcount );
+			break;
+
+		case 4:
+			printf("Destory Linked List Queue \n" );
+			break;
+
+		default:
+			printf("wrong+++ \n");
+			break;
+		}
+
+		if( i==4 ) break;
+	}
+
+
+	return 0;
+}
+
+
+
+

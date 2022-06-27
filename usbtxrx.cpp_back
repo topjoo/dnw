@@ -1,0 +1,2911 @@
+#define STRICT
+#define WIN32_LEAN_AND_MEAN
+
+#include "resource.h"
+
+#include <windows.h>
+#include <windowsx.h>
+#include <commctrl.h>
+#include <tchar.h>
+#include <string.h>
+#include <process.h>  /* For _beginthread() */
+#include <stdlib.h>
+//#include <conio.h>
+//#include <stdio.h>
+//#include <assert.h>
+
+
+#include "def.h"
+#include "dnw.h"
+#include "engine.h"
+#include "fileopen.h"
+#include "d_box.h"
+
+#include "rwbulk.h"
+
+/* 
+   To compile rwbulk.c, the followings should be added.
+   1. linker option: usbd.lib,setupapi.lib 
+   2. additional library path: C:\NTDDK\libfre\i386
+   3. additional include directories: C:\NTDDK\inc
+   4. copy bulkusb.h,guid829.h from bulkusb directory.
+*/
+#define MAX_FILE_NUM	32
+#define MAX_PATH        260
+
+
+HANDLE hWrite = INVALID_HANDLE_VALUE;
+HANDLE hRead = INVALID_HANDLE_VALUE;
+
+static volatile char *txBuf = NULL;
+static volatile DWORD iTxBuf;
+static DWORD txBufSize;
+static DWORD fileBufSize;
+
+DWORD downloadAddress;
+TCHAR szDownloadAddress[16] = { 0, };
+TCHAR szDownloadString[MAXHISTORY][FILENAMELEN] = { 0, };
+
+//#ifdef SANSIX_SMP201_CUSTOMIZING
+TCHAR szQuickDownloadString[MAXHISTORY][FILENAMELEN] = { 0, };
+TCHAR szQuickFileName[MAXHISTORY][FILENAMELEN] = { 0, };
+TCHAR szUMONDownloadString[MAXHISTORY][FILENAMELEN] = { 0, };
+TCHAR szUMONSFileName[MAXHISTORY][FILENAMELEN] = { 0, };
+//#endif
+
+int transmitMenuNumber = 0;
+int UbootMenuNumber = 0;
+int UbootMenuNumber2 = 0;
+
+void UsbTxFile(void *args);
+extern UINT hex2int(TCHAR *str);
+
+void MenuUsbStatus(HWND hwnd)
+{
+    dumpUsbConfig();
+}
+
+void AddTransmitMenu(HWND hWnd, char * str, unsigned long address)
+{
+	HMENU MenuBar;
+	HMENU SubMenuBar;
+	TCHAR tempstr[FILENAMELEN] = {0};
+	TCHAR menustr[FILENAMELEN] = {0};
+	int same = -1;
+	int i;
+
+	for ( i = 0; i < FILENAMELEN; i ++ )
+	{
+		tempstr[i] = menustr[i] = '\0';
+	}
+
+	strncpy(menustr,str,strlen(str));
+	wsprintf(tempstr, ",0x%x", address);
+	strcat(menustr, tempstr);
+
+	for ( i = 0; i < transmitMenuNumber; i++ )
+	{
+		if ( _stricmp(menustr, szDownloadString[i]) == 0 )
+		{
+			same = i;
+			break;
+		}
+	}
+
+	MenuBar = GetSubMenu(GetMenu(hWnd), 1);
+	SubMenuBar = GetSubMenu(MenuBar, 0);
+
+	for ( i = 0; i < transmitMenuNumber; i++ )
+	{
+		DeleteMenu(SubMenuBar, HISTORYMENUID+i, MF_BYCOMMAND);
+	}
+
+	for ( i = ((same == -1) ? transmitMenuNumber:same); i > 0; i-- )
+	{
+		if ( i < (MAXHISTORY/3) )
+			strcpy(szDownloadString[i],szDownloadString[i-1]);
+	}
+	strcpy(szDownloadString[0],menustr);
+	if ( transmitMenuNumber < (MAXHISTORY/3) )
+	{
+		if ( same == -1 ) transmitMenuNumber++;
+	}
+	for ( i = 0; i < transmitMenuNumber; i++ )
+	{
+		AppendMenu(SubMenuBar, MF_STRING, HISTORYMENUID + i, szDownloadString[i]);
+	}
+
+    WriteUserConfig();
+}
+
+void AddUbootMenu(HWND hWnd, char * str)
+{
+	HMENU MenuBar;
+	HMENU SubMenuBar;
+	TCHAR tempstr[FILENAMELEN];
+	TCHAR menustr[FILENAMELEN];
+	int same = -1;
+	int i;
+
+	for ( i = 0; i < FILENAMELEN; i ++ )
+	{
+		tempstr[i] = menustr[i] = '\0';
+	}
+
+	strcpy(menustr,str);
+
+	for ( i = (MAXHISTORY/3); i < (MAXHISTORY/3)+UbootMenuNumber; i++ )
+	{
+		if ( _stricmp(menustr, szDownloadString[i]) == 0 )
+		{
+			same = i;
+			break;
+		}
+	}
+
+	MenuBar = GetSubMenu(GetMenu(hWnd), 1);
+	SubMenuBar = GetSubMenu(MenuBar, 1);
+
+	for ( i = (MAXHISTORY/3); i < (MAXHISTORY/3)+UbootMenuNumber; i++ )
+	{
+		DeleteMenu(SubMenuBar, HISTORYMENUID+i, MF_BYCOMMAND);
+	}
+
+	for ( i = ((same == -1) ? UbootMenuNumber:same-(MAXHISTORY/3))+(MAXHISTORY/3); i > (MAXHISTORY/3); i-- )
+	{
+		if ( i < MAXHISTORY )
+			strcpy(szDownloadString[i],szDownloadString[i-1]);
+	}
+	strcpy(szDownloadString[(MAXHISTORY/3)],menustr);
+	if ( UbootMenuNumber < (MAXHISTORY/3) )
+	{
+		if ( same == -1 ) UbootMenuNumber++;
+	}
+	for ( i = 0; i < UbootMenuNumber; i++ )
+	{
+		AppendMenu(SubMenuBar, MF_STRING, HISTORYMENUID+(MAXHISTORY/3)+i, szDownloadString[i+(MAXHISTORY/3)]);
+	}
+
+    WriteUserConfig();
+}
+
+void AddUbootMenu2(HWND hWnd, char * str)
+{
+	HMENU MenuBar;
+	HMENU SubMenuBar;
+	TCHAR tempstr[FILENAMELEN];
+	TCHAR menustr[FILENAMELEN];
+	int same = -1;
+	int i;
+
+	for ( i = 0; i < FILENAMELEN; i ++ )
+	{
+		tempstr[i] = menustr[i] = '\0';
+	}
+
+	strncpy(menustr,str,strlen(str));
+
+	for ( i = (MAXHISTORY*2/3); i < (MAXHISTORY*2/3)+UbootMenuNumber2; i++ )
+	{
+		if ( _stricmp(menustr, szDownloadString[i]) == 0 )
+		{
+			same = i;
+			break;
+		}
+	}
+
+	MenuBar = GetSubMenu(GetMenu(hWnd), 1);
+	SubMenuBar = GetSubMenu(MenuBar, 1);
+
+	for ( i = (MAXHISTORY*2/3); i < (MAXHISTORY*2/3)+UbootMenuNumber2; i++ )
+	{
+		DeleteMenu(SubMenuBar, HISTORYMENUID+i, MF_BYCOMMAND);
+	}
+
+	for ( i = ((same == -1) ? UbootMenuNumber2:same-(MAXHISTORY*2/3))+(MAXHISTORY*2/3); i > (MAXHISTORY*2/3); i-- )
+	{
+		if ( i < MAXHISTORY )
+			strcpy(szDownloadString[i],szDownloadString[i-1]);
+	}
+	strcpy(szDownloadString[(MAXHISTORY*2/3)],menustr);
+	if ( UbootMenuNumber2 < (MAXHISTORY*1/3) )
+	{
+		if ( same == -1 ) UbootMenuNumber2++;
+	}
+	for ( i = 0; i < UbootMenuNumber2; i++ )
+	{
+		AppendMenu(SubMenuBar, MF_STRING, HISTORYMENUID+(MAXHISTORY*2/3)+i, szDownloadString[i+(MAXHISTORY*2/3)]);
+	}
+
+    WriteUserConfig();
+}
+
+
+void MenuUsbTransmitHistory(HWND hwnd, int history)
+{
+    ULONG i;
+    HANDLE hFile = NULL;
+    ULONG fileSize;
+    USHORT cs=0;
+    unsigned long threadResult;
+	TCHAR * tocken = NULL;
+	int comma;
+	DWORD localdownloadAddress;
+	int cnt=0;
+
+	if(hWrite) /// added.
+	{
+		CloseHandle(hWrite);
+		hWrite = INVALID_HANDLE_VALUE;
+	}
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can not open USB device.\n"),TEXT("TX History Error"), MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+    
+//	tocken = strtok(szDownloadString[history],",");
+	for ( i = 0; i < FILENAMELEN; i++ )
+	{
+		if ( szDownloadString[history][i] == ',' )
+		{
+			comma = i;
+			tocken = &szDownloadString[history][i+1];
+			break;
+		}
+	}
+
+
+	memcpy(szFileName, szDownloadString[history], i);
+	szFileName[i] = '\0';
+//	tocken = strtok(NULL,",");
+//	memcpy(szTitleName, szEBOOTTitleName, FILENAMELEN);
+	localdownloadAddress = hex2int(tocken);
+    
+//    if(result==0) //file open fail
+//    {
+//	CloseHandle(hWrite);
+//	return;
+//    }
+
+    hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+    if(hFile==INVALID_HANDLE_VALUE)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Open (%s)]\n"),szFileName );
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return;
+    }
+    
+	AddTransmitMenu(hwnd, szFileName, localdownloadAddress);
+
+    fileSize=GetFileSize(hFile,NULL);
+
+	if(txBuf) free((void*)txBuf); /// 2010.5.12 added
+    txBuf=(char *)malloc(fileSize+10); 
+    if(txBuf==0)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize+6 );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return;
+    }
+
+    ReadFile(hFile,(void *)(txBuf+8),fileSize,&txBufSize,NULL);
+    if(txBufSize!=fileSize)    
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		if(txBuf) free( (void*)txBuf ); /// added
+		return;
+    }
+
+    *((DWORD *)txBuf+0)=localdownloadAddress;
+    *((DWORD *)txBuf+1)=fileSize+10;   //attach filesize(n+6+4) 
+    for(i=8;i<(fileSize+8);i++)
+		cs+=(BYTE)(txBuf[i]);
+    *((WORD *)(txBuf+8+fileSize))=cs;   //attach checksum 
+    
+    txBufSize+=10;
+    iTxBuf=0;
+
+    CloseHandle(hFile);
+    
+    threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+    
+    if(threadResult!=-1)
+    {
+		//Create the download progress dialogbox.
+		CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+		//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+    }
+    else
+    {
+		EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+    }
+
+    //The dialog box will be closed at the end of TxFile().
+    //free(txBuf) & CloseHandle(hWrite) will be done in TxFile()
+}
+
+void MenuUsbTransmit(HWND hwnd)
+{
+    ULONG i;
+    HANDLE hFile = NULL;
+    ULONG fileSize;
+    USHORT cs=0;
+    BOOL result;
+    unsigned long threadResult;
+	int cnt=0;
+
+	if(hWrite) /// added.
+	{
+		CloseHandle(hWrite);
+		hWrite = INVALID_HANDLE_VALUE;
+	}
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can not open USB device.\n"),TEXT("Transmit Error"), MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+    
+    result=PopFileOpenDlg(hwnd,szEBOOTFileName,szEBOOTTitleName);
+	memcpy(szFileName, szEBOOTFileName, FILENAMELEN);
+	memcpy(szTitleName, szEBOOTTitleName, FILENAMELEN);
+
+	EB_Printf(TEXT("[dnw] RAM File; [%s] \n"), szEBOOTFileName );
+    
+    if(result==0) //file open fail
+    {
+		CloseHandle(hWrite);
+		return;
+    }
+
+    hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+    if(hFile==INVALID_HANDLE_VALUE)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Open (%s)]\n"),szFileName );
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return;
+    }
+    
+	AddTransmitMenu(hwnd, szFileName, downloadAddress);
+
+    fileSize=GetFileSize(hFile,NULL);
+
+	if(txBuf) free((void*)txBuf); /// 2010.5.12 added
+    txBuf=(char *)malloc(fileSize+10); 
+    if(txBuf==0)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize+6 );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return;
+    }
+
+    ReadFile(hFile,(void *)(txBuf+8),fileSize,&txBufSize,NULL);
+    if(txBufSize!=fileSize)    
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Size(%s) Error]\n"),fileSize );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		if(txBuf) free( (void*)txBuf ); /// added
+		return;
+    }
+
+    *((DWORD *)txBuf+0)=downloadAddress;
+    *((DWORD *)txBuf+1)=fileSize+10;   //attach filesize(n+6+4) 
+    for(i=8;i<(fileSize+8);i++)
+		cs+=(BYTE)(txBuf[i]);
+    *((WORD *)(txBuf+8+fileSize))=cs;   //attach checksum 
+    
+    txBufSize+=10;
+    iTxBuf=0;
+
+    CloseHandle(hFile);
+    
+    threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+    
+    if(threadResult!=-1)
+    {
+		//Create the download progress dialogbox.
+		CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+		//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    	//isn't needed because the dialog box already has WS_VISIBLE attribute.
+    }
+    else
+    {
+		EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+    }
+
+    //The dialog box will be closed at the end of TxFile().
+    //free(txBuf) & CloseHandle(hWrite) will be done in TxFile()
+}
+
+void MenuUBOOT(HWND hwnd)
+{
+    ULONG i, j;
+    HANDLE hFile = NULL;
+    HANDLE hOutFile;
+	HANDLE hBinFile[MAX_FILE_NUM];
+	char * szBinFileName[MAX_FILE_NUM] = { 0, };
+	char * szBinFileFullName[MAX_FILE_NUM] = { 0, };
+	char * szOutFileName = NULL;
+
+    ULONG fileSize;
+    USHORT cs=0;
+    BOOL result;
+    unsigned long threadResult;
+	TCHAR	szTempFileName[3];
+	ULONG nFileNumber;
+	unsigned int nCheckSum = 0;
+	volatile char * ptxBuf = NULL;
+	char *lstFileBuf = NULL;
+	DWORD lstFileBufSize;
+	TCHAR szDirName[FILENAMELEN];
+	int cnt=0, idel=0;
+
+	if(hWrite) /// added.
+	{
+		CloseHandle(hWrite);
+		hWrite = INVALID_HANDLE_VALUE;
+	}
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+    
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can't open USB device.\n"),TEXT("UBOOT Error"),
+		   MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+
+    result=PopFileOpenDlg(hwnd,szUBOOTFileName,szUBOOTTitleName);
+	memcpy(szFileName, szUBOOTFileName, FILENAMELEN);
+	memcpy(szTitleName, szUBOOTTitleName, FILENAMELEN);
+
+	strncpy ( szDirName, szFileName, strlen(szFileName) - strlen(szTitleName) );
+	szDirName[strlen(szFileName) - strlen(szTitleName)] = 0;
+    
+    if(result==0) //file open fail
+    {
+		CloseHandle(hWrite);
+		return;
+    }
+
+	AddUbootMenu(hwnd, szFileName);
+
+	szTempFileName[0] = tolower(szFileName[strlen(szFileName)-3]);
+	szTempFileName[1] = tolower(szFileName[strlen(szFileName)-2]);
+	szTempFileName[2] = tolower(szFileName[strlen(szFileName)-1]);
+
+	if ( !strncmp(szTempFileName,_T("lst"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		lstFileBuf=(char *)malloc(fileSize+1);
+		if(lstFileBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+
+		// Read chain.lst file
+		ReadFile(hFile,(void *)(lstFileBuf),fileSize,&lstFileBufSize,NULL);
+		lstFileBuf[lstFileBufSize] = 0;
+		CloseHandle(hFile);
+
+		szBinFileName[0] = strtok(lstFileBuf, "\t\r\n+");
+		szBinFileFullName[0] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[0])+1);
+		strcpy(szBinFileFullName[0], szDirName);
+		strcat(szBinFileFullName[0], szBinFileName[0]);
+		for ( nFileNumber = 1; nFileNumber < MAX_FILE_NUM; nFileNumber++ )
+		{
+			szBinFileName[nFileNumber] = strtok(NULL, "\r\n+");
+			if ( szBinFileName[nFileNumber] == NULL ) break;
+			szBinFileFullName[nFileNumber] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[nFileNumber])+1);
+			strcpy(szBinFileFullName[nFileNumber], szDirName);
+			strcat(szBinFileFullName[nFileNumber], szBinFileName[nFileNumber]);
+		}
+
+		iTxBuf=0;
+		
+		txBufSize = 7 /* X000FF\n */
+					+ 4 /* check sum */
+					+ 4 /* num Regions */
+					+ nFileNumber*8; /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i ++ )
+		{
+			hBinFile[i] = CreateFile(szBinFileFullName[i],GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+			if(hBinFile[i] == INVALID_HANDLE_VALUE)
+			{
+				EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szBinFileFullName[i] );
+				if(hWrite) CloseHandle(hWrite); /// added.
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				return;
+			}
+			txBufSize += GetFileSize(hBinFile[i],NULL);
+		}
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(txBufSize);
+
+		*((BYTE *)txBuf+0)=0x58;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf  + 7 /* X000FF\n */
+						+ 4 /* check sum */
+						+ 4 /* num Regions */
+						+ nFileNumber*8; /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i++ )
+		{
+			fileSize = GetFileSize(hBinFile[i],NULL);
+			ReadFile(hBinFile[i],(void *)(ptxBuf),fileSize,&fileBufSize,NULL);
+			if(fileBufSize!=fileSize)    
+			{
+    			EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+				if(hWrite) CloseHandle(hWrite); /// added.
+				if(txBuf) free( (void*)txBuf ); /// added
+				if(lstFileBuf) free( (void*)lstFileBuf );
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				if(hBinFile[i]) CloseHandle(hBinFile[i]);
+				return;
+			}
+
+			for ( j = 0; j < 8; j++ )
+			{
+				*((BYTE *)txBuf+15+(i*8+j))=(BYTE)(ptxBuf[7+j]);
+				nCheckSum += (BYTE)(ptxBuf[7+j]);
+			}
+			ptxBuf += fileSize;
+
+			CloseHandle(hBinFile[i]);
+		}
+
+		ptxBuf = txBuf + 7;
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;   //checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //checksum
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added
+		
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("ubi"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free( (void*)txBuf ); /// 2010.0512 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("bin"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("nb0"),3) || !strncmp(szTempFileName,_T("dio"),3) )
+	{
+		nFileNumber = 1;
+
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize+7+4+4+4+4+MAX_PATH);
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			return;
+		}
+		memset((void *)txBuf, 0, fileSize+7+4+4+4+4+MAX_PATH);
+
+		// Read nb0 file
+		ReadFile(hFile,(void *)(txBuf+7+4+4+4+4+MAX_PATH),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		ptxBuf = txBuf+7+4+4+4+4+MAX_PATH;
+
+		iTxBuf=0;
+		
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf + 7 + 4 + 4;
+
+		*((DWORD *)ptxBuf+0)=0;				//nb0 start address == 0
+		*((DWORD *)ptxBuf+1)=fileSize;		//nb0 filesize
+
+
+
+		strcpy((char *)(ptxBuf+8), szTitleName);
+
+		ptxBuf = txBuf+7;
+		nCheckSum = 0;
+		for ( i = 0; i < 4+4+MAX_PATH; i++ )
+		{
+			nCheckSum += (unsigned char)(*(ptxBuf+i));
+		}
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;		//checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //file number = 1
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		txBufSize += (7+4+4+4+4+MAX_PATH);
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+}
+
+
+void MenuUBOOT2(HWND hwnd)
+{
+    ULONG i, j;
+    HANDLE hFile = NULL;
+    HANDLE hOutFile;
+	HANDLE hBinFile[MAX_FILE_NUM];
+	char * szBinFileName[MAX_FILE_NUM];
+	char * szBinFileFullName[MAX_FILE_NUM];
+	char * szOutFileName = NULL;
+
+    ULONG fileSize;
+    USHORT cs=0;
+    BOOL result;
+    unsigned long threadResult;
+	TCHAR	szTempFileName[3];
+	ULONG nFileNumber;
+	unsigned int nCheckSum = 0;
+	volatile char * ptxBuf = NULL;
+
+	char *lstFileBuf = NULL;
+	DWORD lstFileBufSize;
+   
+	TCHAR szDirName[FILENAMELEN];
+	int cnt=0, idel=0;
+
+	if(hWrite) /// added.
+	{
+		CloseHandle(hWrite);
+		hWrite = INVALID_HANDLE_VALUE;
+	}
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+    
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can't open USB device.\n"),TEXT("UBOOT2 Error"), MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+
+    result=PopFileOpenDlg(hwnd,szUBOOTFileName,szUBOOTTitleName);
+	memcpy(szFileName, szUBOOTFileName, FILENAMELEN);
+	memcpy(szTitleName, szUBOOTTitleName, FILENAMELEN);
+
+	strncpy ( szDirName, szFileName, strlen(szFileName) - strlen(szTitleName) );
+	szDirName[strlen(szFileName) - strlen(szTitleName)] = 0;
+    
+    if(result==0) //file open fail
+    {
+		CloseHandle(hWrite);
+		return;
+    }
+
+	AddUbootMenu2(hwnd, szFileName);
+
+	szTempFileName[0] = tolower(szFileName[strlen(szFileName)-3]);
+	szTempFileName[1] = tolower(szFileName[strlen(szFileName)-2]);
+	szTempFileName[2] = tolower(szFileName[strlen(szFileName)-1]);
+	if ( !strncmp(szTempFileName,_T("lst"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		lstFileBuf=(char *)malloc(fileSize+1);
+		if(lstFileBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read chain.lst file
+		ReadFile(hFile,(void *)(lstFileBuf),fileSize,&lstFileBufSize,NULL);
+		lstFileBuf[lstFileBufSize] = 0;
+		CloseHandle(hFile);
+
+		szBinFileName[0] = strtok(lstFileBuf, "\t\r\n+");
+		szBinFileFullName[0] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[0])+1);
+		strcpy(szBinFileFullName[0], szDirName);
+		strcat(szBinFileFullName[0], szBinFileName[0]);
+		for ( nFileNumber = 1; nFileNumber < MAX_FILE_NUM; nFileNumber++ )
+		{
+			szBinFileName[nFileNumber] = strtok(NULL, "\r\n+");
+			if ( szBinFileName[nFileNumber] == NULL ) break;
+			szBinFileFullName[nFileNumber] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[nFileNumber])+1);
+			strcpy(szBinFileFullName[nFileNumber], szDirName);
+			strcat(szBinFileFullName[nFileNumber], szBinFileName[nFileNumber]);
+		}
+
+		iTxBuf=0;
+		
+		txBufSize = 7 /* X000FF\n */
+					+ 4 /* check sum */
+					+ 4 /* num Regions */
+					+ nFileNumber*(8+260); /* start address + length + filename */
+
+		for ( i = 0; i < nFileNumber; i ++ )
+		{
+			hBinFile[i] = CreateFile(szBinFileFullName[i],GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+			if(hBinFile[i] == INVALID_HANDLE_VALUE)
+			{
+				EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szBinFileFullName[i] );
+				if(hFile) CloseHandle(hFile); /// added.
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				return;
+			}
+			txBufSize += GetFileSize(hBinFile[i],NULL);
+		}
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(txBufSize);
+
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf  + 7 /* X000FF\n */
+						+ 4 /* check sum */
+						+ 4 /* num Regions */
+						+ nFileNumber*(8+260); /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i++ )
+		{
+			fileSize = GetFileSize(hBinFile[i],NULL);
+			ReadFile(hBinFile[i],(void *)(ptxBuf),fileSize,&fileBufSize,NULL);
+			if(fileBufSize!=fileSize)    
+			{
+    			EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+				if(hFile) CloseHandle(hFile); /// added.
+				if(hBinFile[i]) CloseHandle(hBinFile[i]);
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(txBuf) free( (void*)txBuf ); /// added
+				return;
+			}
+
+			for ( j = 0; j < 8 + 260; j++ )
+			{
+				if ( j < 8 )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(ptxBuf[7+j]);
+					nCheckSum += (BYTE)(ptxBuf[7+j]);
+				}
+				else if ( j >= 8 && j < (8+strlen(szBinFileName[i])) )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(szBinFileName[i][j-8]);
+					nCheckSum += (BYTE)(szBinFileName[i][j-8]);
+				}
+				else
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=0;
+				}
+			}
+
+			ptxBuf += fileSize;
+
+			CloseHandle(hBinFile[i]);
+		}
+
+		ptxBuf = txBuf + 7;
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;   //checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //checksum
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("ubi"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("bin"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("nb0"),3) || !strncmp(szTempFileName,_T("dio"),3) )
+	{
+		nFileNumber = 1;
+
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize+7+4+4+4+4+MAX_PATH);
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			return;
+		}
+		memset((void *)txBuf, 0, fileSize+7+4+4+4+4+MAX_PATH);
+
+		// Read nb0 file
+		ReadFile(hFile,(void *)(txBuf+7+4+4+4+4+MAX_PATH),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		ptxBuf = txBuf+7+4+4+4+4+MAX_PATH;
+
+		iTxBuf=0;
+		
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf + 7 + 4 + 4;
+
+		*((DWORD *)ptxBuf+0)=0;				//nb0 start address == 0
+		*((DWORD *)ptxBuf+1)=fileSize;		//nb0 filesize
+
+
+
+		strcpy((char *)(ptxBuf+8), szTitleName);
+
+		ptxBuf = txBuf+7;
+		nCheckSum = 0;
+		for ( i = 0; i < 4+4+MAX_PATH; i++ )
+		{
+			nCheckSum += (unsigned char)(*(ptxBuf+i));
+		}
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;		//checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //file number = 1
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		txBufSize += (7+4+4+4+4+MAX_PATH);
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+}
+
+void MenuUBOOTHistory(HWND hwnd, int history)
+{
+    ULONG i, j;
+    HANDLE hFile = NULL;
+    HANDLE hOutFile;
+	HANDLE hBinFile[MAX_FILE_NUM];
+	char * szBinFileName[MAX_FILE_NUM];
+	char * szBinFileFullName[MAX_FILE_NUM];
+	char * szOutFileName = NULL;
+
+    ULONG fileSize;
+    USHORT cs=0;
+    unsigned long threadResult;
+	TCHAR	szTempFileName[3];
+	ULONG nFileNumber;
+	unsigned int nCheckSum = 0;
+	volatile char * ptxBuf = NULL;
+	char *lstFileBuf = NULL;
+	DWORD lstFileBufSize;
+   
+	TCHAR szDirName[FILENAMELEN];
+	int lastpoint;
+	TCHAR *tocken = NULL;
+	int cnt=0, idel=0;
+
+
+	if(hWrite) { CloseHandle(hWrite); hWrite = INVALID_HANDLE_VALUE; } /// added.
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+    
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can't open USB device.\n"),TEXT("Error"),
+		   MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+
+//    result=PopFileOpenDlg(hwnd,szUBOOTFileName,szUBOOTTitleName);
+//	tocken = strtok(,",");
+
+	memcpy(szFileName, szDownloadString[history], strlen(szDownloadString[history]));
+	szFileName[strlen(szDownloadString[history])] = '\0';
+	for ( i = 0; i < FILENAMELEN; i++ )
+	{
+		if ( szDownloadString[history][i] == '\\' )
+		{
+			lastpoint = i;
+			tocken = &szDownloadString[history][i+1];
+		}
+		if ( szDownloadString[history][i] == '\0' )
+			break;
+	}
+	memcpy(szTitleName, tocken, FILENAMELEN-i);
+
+	strncpy ( szDirName, szFileName, strlen(szFileName) - strlen(szTitleName) );
+	szDirName[strlen(szFileName) - strlen(szTitleName)] = 0;
+    
+//    if(result==0) //file open fail
+//    {
+//		EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName);
+//		CloseHandle(hWrite);
+//		return;
+//    }
+
+	AddUbootMenu(hwnd, szFileName);
+
+	szTempFileName[0] = tolower(szFileName[strlen(szFileName)-3]);
+	szTempFileName[1] = tolower(szFileName[strlen(szFileName)-2]);
+	szTempFileName[2] = tolower(szFileName[strlen(szFileName)-1]);
+	
+	if ( !strncmp(szTempFileName,_T("lst"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		lstFileBuf=(char *)malloc(fileSize+1);
+		if(lstFileBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read chain.lst file
+		ReadFile(hFile,(void *)(lstFileBuf),fileSize,&lstFileBufSize,NULL);
+		lstFileBuf[lstFileBufSize] = 0;
+		CloseHandle(hFile);
+
+		szBinFileName[0] = strtok(lstFileBuf, "\t\r\n+");
+		szBinFileFullName[0] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[0])+1);
+		strcpy(szBinFileFullName[0], szDirName);
+		strcat(szBinFileFullName[0], szBinFileName[0]);
+		for ( nFileNumber = 1; nFileNumber < MAX_FILE_NUM; nFileNumber++ )
+		{
+			szBinFileName[nFileNumber] = strtok(NULL, "\r\n+");
+			if ( szBinFileName[nFileNumber] == NULL ) break;
+			szBinFileFullName[nFileNumber] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[nFileNumber])+1);
+			strcpy(szBinFileFullName[nFileNumber], szDirName);
+			strcat(szBinFileFullName[nFileNumber], szBinFileName[nFileNumber]);
+		}
+
+		iTxBuf=0;
+		
+		txBufSize = 7 /* X000FF\n */
+					+ 4 /* check sum */
+					+ 4 /* num Regions */
+					+ nFileNumber*8; /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i ++ )
+		{
+			hBinFile[i] = CreateFile(szBinFileFullName[i],GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+			if(hBinFile[i] == INVALID_HANDLE_VALUE)
+			{
+				EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szBinFileFullName[i] );
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				return;
+			}
+			txBufSize += GetFileSize(hBinFile[i],NULL);
+		}
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(txBufSize);
+
+		*((BYTE *)txBuf+0)=0x58;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf  + 7 /* X000FF\n */
+						+ 4 /* check sum */
+						+ 4 /* num Regions */
+						+ nFileNumber*8; /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i++ )
+		{
+			fileSize = GetFileSize(hBinFile[i],NULL);
+			ReadFile(hBinFile[i],(void *)(ptxBuf),fileSize,&fileBufSize,NULL);
+			if(fileBufSize!=fileSize)    
+			{
+    			EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(txBuf) free( (void*)txBuf ); /// added
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				if(hBinFile[i]) CloseHandle(hBinFile[i]); /// added
+				return;
+			}
+
+			for ( j = 0; j < 8; j++ )
+			{
+				*((BYTE *)txBuf+15+(i*8+j))=(BYTE)(ptxBuf[7+j]);
+				nCheckSum += (BYTE)(ptxBuf[7+j]);
+			}
+			ptxBuf += fileSize;
+
+			CloseHandle(hBinFile[i]);
+		}
+
+		ptxBuf = txBuf + 7;
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;   //checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //checksum
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("ubi"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) CloseHandle(hWrite); /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("bin"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("nb0"),3) || !strncmp(szTempFileName,_T("dio"),3) )
+	{
+		nFileNumber = 1;
+
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize+7+4+4+4+4+MAX_PATH);
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		memset((void *)txBuf, 0, fileSize+7+4+4+4+4+MAX_PATH);
+
+		// Read nb0 file
+		ReadFile(hFile,(void *)(txBuf+7+4+4+4+4+MAX_PATH),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		ptxBuf = txBuf+7+4+4+4+4+MAX_PATH;
+
+		iTxBuf=0;
+		
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf + 7 + 4 + 4;
+
+		*((DWORD *)ptxBuf+0)=0;				//nb0 start address == 0
+		*((DWORD *)ptxBuf+1)=fileSize;		//nb0 filesize
+
+
+
+		strcpy((char *)(ptxBuf+8), szTitleName);
+
+		ptxBuf = txBuf+7;
+		nCheckSum = 0;
+		for ( i = 0; i < 4+4+MAX_PATH; i++ )
+		{
+			nCheckSum += (unsigned char)(*(ptxBuf+i));
+		}
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;		//checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //file number = 1
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		txBufSize += (7+4+4+4+4+MAX_PATH);
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+}
+
+
+void MenuUBOOTHistory2(HWND hwnd, int history)
+{
+    ULONG i, j;
+    HANDLE hFile = NULL;
+    HANDLE hOutFile;
+	HANDLE hBinFile[MAX_FILE_NUM];
+	char * szBinFileName[MAX_FILE_NUM];
+	char * szBinFileFullName[MAX_FILE_NUM];
+	char * szOutFileName = NULL;
+
+    ULONG fileSize;
+    USHORT cs=0;
+    unsigned long threadResult;
+	TCHAR	szTempFileName[3];
+	ULONG nFileNumber;
+	unsigned int nCheckSum = 0;
+	volatile char * ptxBuf = NULL;
+	char *lstFileBuf = NULL;
+	DWORD lstFileBufSize;
+   
+	TCHAR szDirName[FILENAMELEN];
+	int lastpoint;
+	TCHAR *tocken = NULL;
+	int cnt=0, idel=0;
+
+	if(hWrite) { CloseHandle(hWrite); hWrite = INVALID_HANDLE_VALUE; } /// added.
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+    
+    
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		MessageBox(hwnd,TEXT("Can't open USB device.\n"),TEXT("Error"),
+		   MB_OK | MB_ICONINFORMATION );
+		return;
+    }
+
+//    result=PopFileOpenDlg(hwnd,szUBOOTFileName,szUBOOTTitleName);
+//	tocken = strtok(,",");
+
+	memcpy(szFileName, szDownloadString[history], strlen(szDownloadString[history]));
+	szFileName[strlen(szDownloadString[history])] = '\0';
+	for ( i = 0; i < FILENAMELEN; i++ )
+	{
+		if ( szDownloadString[history][i] == '\\' )
+		{
+			lastpoint = i;
+			tocken = &szDownloadString[history][i+1];
+		}
+		if ( szDownloadString[history][i] == '\0' )
+			break;
+	}
+	memcpy(szTitleName, tocken, FILENAMELEN-i);
+
+	strncpy ( szDirName, szFileName, strlen(szFileName) - strlen(szTitleName) );
+	szDirName[strlen(szFileName) - strlen(szTitleName)] = 0;
+    
+//    if(result==0) //file open fail
+//    {
+//		EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName);
+//		CloseHandle(hWrite);
+//		return;
+//    }
+
+	AddUbootMenu2(hwnd, szFileName);
+
+	szTempFileName[0] = tolower(szFileName[strlen(szFileName)-3]);
+	szTempFileName[1] = tolower(szFileName[strlen(szFileName)-2]);
+	szTempFileName[2] = tolower(szFileName[strlen(szFileName)-1]);
+	if ( !strncmp(szTempFileName,_T("lst"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		lstFileBuf=(char *)malloc(fileSize+1);
+		if(lstFileBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read chain.lst file
+		ReadFile(hFile,(void *)(lstFileBuf),fileSize,&lstFileBufSize,NULL);
+		lstFileBuf[lstFileBufSize] = 0;
+		CloseHandle(hFile);
+
+		szBinFileName[0] = strtok(lstFileBuf, "\t\r\n+");
+		szBinFileFullName[0] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[0])+1);
+		strcpy(szBinFileFullName[0], szDirName);
+		strcat(szBinFileFullName[0], szBinFileName[0]);
+		for ( nFileNumber = 1; nFileNumber < MAX_FILE_NUM; nFileNumber++ )
+		{
+			szBinFileName[nFileNumber] = strtok(NULL, "\r\n+");
+			if ( szBinFileName[nFileNumber] == NULL ) break;
+			szBinFileFullName[nFileNumber] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[nFileNumber])+1);
+			strcpy(szBinFileFullName[nFileNumber], szDirName);
+			strcat(szBinFileFullName[nFileNumber], szBinFileName[nFileNumber]);
+		}
+
+		iTxBuf=0;
+		
+		txBufSize = 7 /* X000FF\n */
+					+ 4 /* check sum */
+					+ 4 /* num Regions */
+					+ nFileNumber*(8+260); /* start address + length + filename */
+
+		for ( i = 0; i < nFileNumber; i ++ )
+		{
+			hBinFile[i] = CreateFile(szBinFileFullName[i],GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+			if(hBinFile[i] == INVALID_HANDLE_VALUE)
+			{
+				EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szBinFileFullName[i] );
+				if(hFile) CloseHandle(hFile); /// added.
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				return;
+			}
+			txBufSize += GetFileSize(hBinFile[i],NULL);
+		}
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(txBufSize);
+
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf  + 7 /* X000FF\n */
+						+ 4 /* check sum */
+						+ 4 /* num Regions */
+						+ nFileNumber*(8+260); /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i++ )
+		{
+			fileSize = GetFileSize(hBinFile[i],NULL);
+			ReadFile(hBinFile[i],(void *)(ptxBuf),fileSize,&fileBufSize,NULL);
+			if(fileBufSize!=fileSize)    
+			{
+    			EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+				if(hWrite) { CloseHandle(hWrite); } /// added.
+				if(txBuf) free( (void*)txBuf ); /// added
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				if(hBinFile[i]) CloseHandle(hBinFile[i]); /// added.
+				return;
+			}
+
+			for ( j = 0; j < 8 + 260; j++ )
+			{
+				if ( j < 8 )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(ptxBuf[7+j]);
+					nCheckSum += (BYTE)(ptxBuf[7+j]);
+				}
+				else if ( j >= 8 && j < (8+strlen(szBinFileName[i])) )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(szBinFileName[i][j-8]);
+					nCheckSum += (BYTE)(szBinFileName[i][j-8]);
+				}
+				else
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=0;
+				}
+			}
+
+			ptxBuf += fileSize;
+
+			CloseHandle(hBinFile[i]);
+		}
+
+		ptxBuf = txBuf + 7;
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;   //checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //checksum
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("ubi"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("bin"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("nb0"),3) || !strncmp(szTempFileName,_T("dio"),3) )
+	{
+		nFileNumber = 1;
+
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize+7+4+4+4+4+MAX_PATH);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			return;
+		}
+		memset((void *)txBuf, 0, fileSize+7+4+4+4+4+MAX_PATH);
+
+		// Read nb0 file
+		ReadFile(hFile,(void *)(txBuf+7+4+4+4+4+MAX_PATH),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return;
+		}
+		CloseHandle(hFile);
+
+		ptxBuf = txBuf+7+4+4+4+4+MAX_PATH;
+
+		iTxBuf=0;
+		
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf + 7 + 4 + 4;
+
+		*((DWORD *)ptxBuf+0)=0;				//nb0 start address == 0
+		*((DWORD *)ptxBuf+1)=fileSize;		//nb0 filesize
+
+
+
+		strcpy((char *)(ptxBuf+8), szTitleName);
+
+		ptxBuf = txBuf+7;
+		nCheckSum = 0;
+		for ( i = 0; i < 4+4+MAX_PATH; i++ )
+		{
+			nCheckSum += (unsigned char)(*(ptxBuf+i));
+		}
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;		//checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //file number = 1
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		txBufSize += (7+4+4+4+4+MAX_PATH);
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+}
+
+
+#define USB_OVERLAPPED_IO FALSE  //should be FALSE becasue USB overlapped IO doesn't work well.
+
+//#define USB_TX_SIZE (4096*4*16)
+//#define USB_RX_SIZE (4096*4*16) 
+//#define TX_SIZE (4096*4)
+//#define RX_SIZE (4096*4) 
+
+VOID CALLBACK UsbWriteCompleteRoutine(DWORD dwErrorCode,DWORD dwNumberOfBytesTransfered,
+	                              LPOVERLAPPED lpOverlapped)
+{
+    //nothing to do
+}
+
+void UsbTxFile(void *args)
+{
+    void *txBlk = NULL;
+    ULONG txBlkSize;
+    DWORD nBytesWrite;
+    DWORD txBufSize100;
+	
+#if USB_OVERLAPPED_IO
+    //NOTE: hWrite should have FILE_FLAG_OVERLAPPED attribute.
+    OVERLAPPED os;
+    memset(&os,0,sizeof(OVERLAPPED));
+
+    os.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+    if(os.hEvent==NULL)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:DoRxTx os.hEvent]\n"));
+		free((void *)txBuf);
+		CloseHandle(hWrite);
+		_endthread();
+    }
+#endif
+
+//	TxMutex = CreateMutex( NULL, FALSE, "USBTx"); /// added.
+//	WaitForSingleObject(TxMutex, INFINITE); /// added.
+
+    InitDownloadProgress();
+
+    txBufSize100=txBufSize/100;
+    if(txBufSize100==0)txBufSize100=1;
+    while(1)
+    {
+        if((txBufSize-iTxBuf) > USB_TX_SIZE)
+		    txBlkSize=USB_TX_SIZE;
+		else
+		    txBlkSize=txBufSize-iTxBuf;
+	
+		txBlk=(void *)(txBuf+iTxBuf);
+    #if USB_OVERLAPPED_IO
+		WriteFile(hWrite,txBlk,txBlkSize,&nBytesWrite,&os);
+        //...
+		GetOverlappedResult(hWrite,&os,&temp,FALSE); 	
+		//...   
+		//Why doesn't work GetOverlappedResult().
+		//It may seem that secbulk.sys doesn't support OverlappedIO.
+    #else
+		WriteFile(hWrite,txBlk,txBlkSize,&nBytesWrite,NULL);
+    #endif
+
+		//assert(nBytesWrite == WriteLen);
+
+		iTxBuf+=USB_TX_SIZE;
+		
+		if( ((iTxBuf/txBufSize100)%2)==1 )
+		    DisplayDownloadProgress(iTxBuf/txBufSize100);
+		
+		if(downloadCanceled==1)break;	//download is canceled by user.
+
+		if(iTxBuf>=txBufSize)break;
+    }
+
+    CloseDownloadProgress();
+
+//	ReleaseMutex(TxMutex); /// added.
+
+    free((void *)txBuf);
+
+    CloseHandle(hWrite);    
+
+#if USB_OVERLAPPED_IO    
+    CloseHandle(os);
+	if(os.hEvent) CloseHandle(os.hEvent); /// added.
+#endif
+
+    _endthread();
+
+
+}
+
+/*
+void UsbTxFile(void *args)
+{
+    void *txBlk;
+    ULONG txBlkSize;
+    DWORD nBytesWrite;
+    DWORD txBufSize100;
+
+#if USB_OVERLAPPED_IO
+    //NOTE: hWrite should have FILE_FLAG_OVERLAPPED attribute.
+    OVERLAPPED os;
+    memset(&os,0,sizeof(OVERLAPPED));
+
+    os.hEvent = CreateEvent(NULL,TRUE,FALSE,NULL);
+    if(os.hEvent==NULL)
+    {
+	EB_Printf(TEXT("[ERROR:DoRxTx os.hEvent]\n"));
+        free((void *)txBuf);
+        CloseHandle(hWrite);    
+	_endthread();
+    }
+#endif
+       
+    InitDownloadProgress();
+
+    txBufSize100=txBufSize/100;
+    if(txBufSize100==0)txBufSize100=1;
+    while(1)
+    {
+        if((txBufSize-iTxBuf) > TX_SIZE)
+	    txBlkSize=TX_SIZE;
+	else
+	    txBlkSize=txBufSize-iTxBuf;
+	
+	txBlk=(void *)(txBuf+iTxBuf);
+    #if USB_OVERLAPPED_IO
+	WriteFile(hWrite,txBlk,txBlkSize,&nBytesWrite,&os);
+        //...
+	GetOverlappedResult(hWrite,&os,&temp,FALSE); 	
+	//...   
+	//Why doesn't work GetOverlappedResult().
+	//It may seem that secbulk.sys doesn't support OverlappedIO.
+    #else
+	WriteFile(hWrite,txBlk,txBlkSize,&nBytesWrite,NULL);
+    #endif
+
+	//assert(nBytesWrite == WriteLen);
+
+	iTxBuf+=TX_SIZE;
+	
+	if( ((iTxBuf/txBufSize100)%2)==1 )
+	    DisplayDownloadProgress(iTxBuf/txBufSize100);
+	
+	if(downloadCanceled==1)break;	//download is canceled by user.
+
+	if(iTxBuf>=txBufSize)break;
+    }
+
+    CloseDownloadProgress();
+
+    free((void *)txBuf);
+
+    CloseHandle(hWrite);    
+
+#if USB_OVERLAPPED_IO    
+    CloseHandle(os);    
+#endif
+
+    _endthread();
+}
+*/
+
+
+
+void MenuUsbReceive(HWND hwnd)
+{
+/*  int nBytesRead, nBytes;
+    ULONG i, j;    
+    UINT success;
+
+
+    if (fRead)
+    {
+	//ReadLen=64;
+        hRead = open_file( inPipe);
+	pinBuf = malloc(ReadLen);
+
+        if (pinBuf) 
+	{
+	    success = ReadFile(hRead,
+	    	              pinBuf,
+                              ReadLen,
+	                      &nBytesRead,
+	                      NULL);
+            printf("<%s> R (%04.4d) : request %06.6d bytes -- %06.6d bytes read\n",
+                    inPipe, i, ReadLen, nBytesRead);
+        }
+	if (pinBuf)
+	{
+	    free(pinBuf);
+	}
+		
+	// close devices if needed
+	if(hRead != INVALID_HANDLE_VALUE)
+	    CloseHandle(hRead);
+    }
+*/
+
+    
+	ULONG i;    
+	UINT success;
+	UINT rxLength=128;
+	ULONG nBytesRead;
+	char *USBRxBuf = NULL;
+	int cnt = 0;
+
+
+    USBRxBuf = (char *)malloc(rxLength);
+    if(USBRxBuf==NULL) return; 
+	if(hRead) { CloseHandle(hRead); hRead = NULL; } /// 2010.5.10 added.
+
+#if 0 /// LSI original
+    hRead = open_file(inPipe);
+#else
+	do {
+		hRead = open_file(inPipe);
+		if( cnt++ > (USB_OPEN_RETRY) ) break;
+	} while( hRead == INVALID_HANDLE_VALUE || hRead == NULL );
+
+	if(hRead==INVALID_HANDLE_VALUE)
+	{
+		if (USBRxBuf)free(USBRxBuf);
+		MessageBox(hwnd,TEXT("ERROR, USB open!!! Check USB port..\n"),TEXT("Error"), MB_OK | MB_ICONINFORMATION );
+		return;
+	}
+#endif
+
+    EB_Printf("[dnw] =============== USB Receive Test ==============\n");
+
+    success = ReadFile(hRead, USBRxBuf, rxLength, &nBytesRead, NULL);
+    if(success)
+    {
+		for(i=0;i<rxLength;i++)
+		{
+		    EB_Printf("0x%02x ",USBRxBuf[i]);
+		    if(i%16==15)EB_Printf("\n");
+		}
+    }
+    else
+    {
+		EB_Printf("[dnw] Error: can't receive data from the USBD\n");
+    }
+
+#if 0
+	//This part is only for S3C2410 USB signal quality test
+    EB_Printf("============ 4096*128byte Read Test ===========\n");
+
+    for(i=0;i<4096;i++)
+    {
+    	success = ReadFile(hRead,
+     	               USBRxBuf,
+                       rxLength,
+	               &nBytesRead,
+	               NULL);
+    	if(success)
+    	{
+	    EB_Printf("%2x,",(unsigned char)USBRxBuf[0]);
+    	}
+    	else
+    	{
+	    EB_Printf("Er,");
+    	}
+    	if(i%16==15)EB_Printf("\n");
+    }
+#endif   
+
+    EB_Printf("[dnw] ===============================================\n");
+
+    if (USBRxBuf)free(USBRxBuf);
+	
+    // close devices if needed
+    if(hRead) { CloseHandle(hRead); hRead = NULL; }
+}
+
+
+int IsUsbConnected(void)
+{
+	HANDLE hDEV = open_dev();
+
+    if ( hDEV!=INVALID_HANDLE_VALUE )
+    {
+		CloseHandle(hDEV);
+		return 1; /* OK */
+    }
+	return 0; /* FAIL */
+}
+
+
+//#ifdef SANSIX_SMP201_CUSTOMIZING
+
+WORD ROM_MenuUBOOT2(HWND hwnd, int Fileindex)
+{
+    ULONG i, j;
+    HANDLE hFile = NULL;
+    HANDLE hOutFile = NULL;
+	HANDLE hBinFile[MAX_FILE_NUM];
+	char * szBinFileName[MAX_FILE_NUM];
+	char * szBinFileFullName[MAX_FILE_NUM];
+	char * szOutFileName = NULL;
+
+    ULONG fileSize;
+    USHORT cs=0;
+    unsigned long threadResult;
+	TCHAR	szTempFileName[3];
+	ULONG nFileNumber;
+	unsigned int nCheckSum = 0;
+	volatile char * ptxBuf = NULL;
+	char *lstFileBuf = NULL;
+	DWORD lstFileBufSize;
+	TCHAR szDirName[FILENAMELEN];
+	char tmpFileName[FILENAMELEN];
+	WORD  MaxLen=0;
+	int   idel=0;
+	DWORD cnt=0;
+
+
+	if(hWrite) { CloseHandle(hWrite);  hWrite = NULL; } /// added.
+	cnt = 0;
+	do {
+	    hWrite = open_file( outPipe);
+		cnt++;
+		if( cnt > (USB_OPEN_RETRY*30) ){ break; } /* NOTE : <-- retry count fix while automatic download */
+		else if( cnt > (USB_OPEN_RETRY*10) ) 
+		{ 
+			/* display */
+			if( 0 == (cnt%4) ) EB_Printf(TEXT("*\b")); 
+			else if( 1 == (cnt%4) ) EB_Printf(TEXT("/\b")); 
+			else if( 2 == (cnt%4) ) EB_Printf(TEXT("|\b")); 
+			else EB_Printf(TEXT("-\b")); 
+		}
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+    
+    if(hWrite==INVALID_HANDLE_VALUE)
+    {
+		//MessageBox(hwnd,TEXT("Can't USB open!!! Check USB port..\n"),TEXT("UBOOT2 ERROR"), MB_OK | MB_ICONINFORMATION );
+		EB_Printf(TEXT("[dnw] ++ERROR++ ROM_UBOOT2 Can't open USB device. Check USB port..\n"));
+		//BinFileIndex = 0;
+		return 0;
+    }
+
+	//EB_Printf(TEXT("\nROM File = %s [%s]"), szQuickDownloadString[Fileindex], szQuickFileName[Fileindex] );
+	///EB_Printf(TEXT("\r\n[dnw] >> ROM File => %s... Waiting.... \n"), szQuickDownloadString[Fileindex]);
+
+	memset(szFileName, 0x00, sizeof(szFileName));
+	memset(szTitleName, 0x00, sizeof(szTitleName));
+
+	memcpy(szFileName, szQuickDownloadString[Fileindex], FILENAMELEN);
+	memcpy(szTitleName, szQuickFileName[Fileindex], FILENAMELEN);
+
+	strncpy ( szDirName, szFileName, strlen(szFileName) - strlen(szTitleName) );
+	szDirName[strlen(szFileName) - strlen(szTitleName)] = 0;
+    
+    if(NULL == szQuickDownloadString[Fileindex] || NULL == szQuickFileName[Fileindex] ) //file open fail
+    {
+
+		MessageBox(hwnd,TEXT("File Not found.. check ini file\n"),TEXT("Error"), MB_OK | MB_ICONINFORMATION );
+		if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+		return 0;
+    }
+
+	///////////AddUbootMenu2(hwnd, szFileName);
+
+	szTempFileName[0] = tolower(szFileName[strlen(szFileName)-3]);
+	szTempFileName[1] = tolower(szFileName[strlen(szFileName)-2]);
+	szTempFileName[2] = tolower(szFileName[strlen(szFileName)-1]);
+	if ( !strncmp(szTempFileName,_T("lst"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		lstFileBuf=(char *)malloc(fileSize+1);
+		if(lstFileBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+
+		// Read chain.lst file
+		ReadFile(hFile,(void *)(lstFileBuf),fileSize,&lstFileBufSize,NULL);
+		lstFileBuf[lstFileBufSize] = 0;
+		CloseHandle(hFile);
+
+		szBinFileName[0] = strtok(lstFileBuf, "\t\r\n+");
+		szBinFileFullName[0] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[0])+1);
+		strcpy(szBinFileFullName[0], szDirName);
+		strcat(szBinFileFullName[0], szBinFileName[0]);
+		for ( nFileNumber = 1; nFileNumber < MAX_FILE_NUM; nFileNumber++ )
+		{
+			szBinFileName[nFileNumber] = strtok(NULL, "\r\n+");
+			if ( szBinFileName[nFileNumber] == NULL ) break;
+			szBinFileFullName[nFileNumber] = (char *)malloc(strlen(szDirName)+strlen(szBinFileName[nFileNumber])+1);
+			strcpy(szBinFileFullName[nFileNumber], szDirName);
+			strcat(szBinFileFullName[nFileNumber], szBinFileName[nFileNumber]);
+		}
+
+		iTxBuf=0;
+		
+		txBufSize = 7 /* X000FF\n */
+					+ 4 /* check sum */
+					+ 4 /* num Regions */
+					+ nFileNumber*(8+260); /* start address + length + filename */
+
+		for ( i = 0; i < nFileNumber; i ++ )
+		{
+			hBinFile[i] = CreateFile(szBinFileFullName[i],GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+			if(hBinFile[i] == INVALID_HANDLE_VALUE)
+			{
+				EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szBinFileFullName[i] );
+				if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				return 0;
+			}
+			txBufSize += GetFileSize(hBinFile[i],NULL);
+		}
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(txBufSize);
+
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf  + 7 /* X000FF\n */
+						+ 4 /* check sum */
+						+ 4 /* num Regions */
+						+ nFileNumber*(8+260); /* start address + length */
+
+		for ( i = 0; i < nFileNumber; i++ )
+		{
+			fileSize = GetFileSize(hBinFile[i],NULL);
+			ReadFile(hBinFile[i],(void *)(ptxBuf),fileSize,&fileBufSize,NULL);
+			if(fileBufSize!=fileSize)    
+			{
+    			EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+				if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+				if(txBuf) free( (void*)txBuf ); /// added
+				if(lstFileBuf) free( (void*)lstFileBuf ); /// 2010.05.12 added.
+				for(idel=0; idel<MAX_FILE_NUM; idel++) /// added.
+				{
+					if(szBinFileFullName[idel]) free((void*)szBinFileFullName[idel]); /// added
+				}
+				if(hBinFile[i]) CloseHandle(hBinFile[i]); /// 2010.05.12 added.
+				return 0;
+			}
+
+			for ( j = 0; j < 8 + 260; j++ )
+			{
+				if ( j < 8 )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(ptxBuf[7+j]);
+					nCheckSum += (BYTE)(ptxBuf[7+j]);
+				}
+				else if ( j >= 8 && j < (8+strlen(szBinFileName[i])) )
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=(BYTE)(szBinFileName[i][j-8]);
+					nCheckSum += (BYTE)(szBinFileName[i][j-8]);
+				}
+				else
+				{
+					*((BYTE *)txBuf+15+(i*(8+260)+j))=0;
+				}
+			}
+
+			ptxBuf += fileSize;
+
+			CloseHandle(hBinFile[i]);
+		}
+
+		ptxBuf = txBuf + 7;
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;   //checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //checksum
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a TX thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("ubi"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return 0;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a TX thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("bin"),3) )
+	{
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		txBuf=(char *)malloc(fileSize);
+
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+
+		// Read ubootimag.ubi file
+		ReadFile(hFile,(void *)(txBuf),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size Error]\n") );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return 0;
+		}
+		CloseHandle(hFile);
+
+		iTxBuf=0;
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+		}
+	}
+	else if ( !strncmp(szTempFileName,_T("nb0"),3) || !strncmp(szTempFileName,_T("dio"),3) )
+	{
+		nFileNumber = 1;
+
+		hFile=CreateFile(szFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+		if(hFile==INVALID_HANDLE_VALUE)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:File Open](%s)\n"), szFileName );
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+		fileSize=GetFileSize(hFile,NULL);
+
+		if(txBuf) free( (void*)txBuf ); /// added
+		txBuf=(char *)malloc(fileSize+7+4+4+4+4+MAX_PATH);
+		if(txBuf==0)
+		{
+			EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize);
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			return 0;
+		}
+		memset((void *)txBuf, 0, fileSize+7+4+4+4+4+MAX_PATH);
+
+		// Read nb0 file
+		ReadFile(hFile,(void *)(txBuf+7+4+4+4+4+MAX_PATH),fileSize,&txBufSize,NULL);
+		if(txBufSize!=fileSize)
+		{
+    		EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+			if(hFile) CloseHandle(hFile); /// added.
+			if(hWrite) { CloseHandle(hWrite); hWrite = NULL; } /// added.
+			if(txBuf) free( (void*)txBuf ); /// added
+			return 0;
+		}
+		CloseHandle(hFile);
+
+		ptxBuf = txBuf+7+4+4+4+4+MAX_PATH;
+
+		iTxBuf=0;
+		
+		*((BYTE *)txBuf+0)=0x4E;
+		*((BYTE *)txBuf+1)=0x30;
+		*((BYTE *)txBuf+2)=0x30;
+		*((BYTE *)txBuf+3)=0x30;
+		*((BYTE *)txBuf+4)=0x46;
+		*((BYTE *)txBuf+5)=0x46;
+		*((BYTE *)txBuf+6)=0xa;
+
+		ptxBuf = txBuf + 7 + 4 + 4;
+
+		*((DWORD *)ptxBuf+0)=0;				//nb0 start address == 0
+		*((DWORD *)ptxBuf+1)=fileSize;		//nb0 filesize
+
+
+
+		strcpy((char *)(ptxBuf+8), szTitleName);
+
+		ptxBuf = txBuf+7;
+		nCheckSum = 0;
+		for ( i = 0; i < 4+4+MAX_PATH; i++ )
+		{
+			nCheckSum += (unsigned char)(*(ptxBuf+i));
+		}
+
+		*((DWORD *)ptxBuf+0)=nCheckSum;		//checksum
+		*((DWORD *)ptxBuf+1)=nFileNumber;   //file number = 1
+
+		szOutFileName = (char *)malloc(255);
+		strcpy(szOutFileName, szDirName);
+		strcat(szOutFileName, TEXT("ubootimage.ubi"));
+
+		txBufSize += (7+4+4+4+4+MAX_PATH);
+
+		hOutFile = CreateFile(szOutFileName,GENERIC_WRITE,FILE_SHARE_WRITE,NULL,CREATE_ALWAYS,0,NULL);
+		WriteFile(hOutFile, (void *)(txBuf), txBufSize, &fileBufSize,NULL);
+		CloseHandle(hOutFile);
+		if(szOutFileName) free((void*)szOutFileName); /// 2010.05.12 added.
+
+		threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+	    
+		if(threadResult!=-1)
+		{
+			//Create the download progress dialogbox.
+			CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+			//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+    		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+		}
+		else
+		{
+			EB_Printf("[dnw] [ERROR:Can't creat a TX thread. Memory is not sufficient]\n");
+		}
+	}
+
+
+	/* --------------- uppercase ------------------------------------- */
+	MaxLen = strlen((char *)szTitleName);
+	memset(tmpFileName, 0x00, sizeof(tmpFileName) );
+	for(i=0; i<MaxLen; i++) 
+	{ 
+		if(szTitleName[i] >= 'a' && szTitleName[i] <= 'z' )
+			tmpFileName[i] = szTitleName[i]^0x20; 
+		else
+			tmpFileName[i] = szTitleName[i];
+	}
+	/* -------------------------------------------------------------- */
+	EB_Printf("[dnw] ROM Writing binary name: %s \r\n", tmpFileName);
+
+	if( NULL != strstr((const char *)tmpFileName, (char *)"NK" ) )
+	{
+		return DNW_NK;
+	}
+	else if( NULL != strstr( (const char *)tmpFileName, (char *)"BOOT" ) ) /* EBOOT */
+	{
+		return DNW_EBOOT;
+	}
+	else if( NULL != strstr( (const char *)tmpFileName, (char *)"STEPLDR" ) )
+	{
+		return DNW_STEP;
+	}
+	else
+	{
+		return DNW_OTHER;
+	}
+}
+
+
+
+BOOL RAM_MenuUsbTransmit(HWND hwnd, int Fileindex)
+{
+    ULONG i;
+    HANDLE hFile = NULL;
+    ULONG fileSize;
+    USHORT cs=0;
+    unsigned long threadResult;
+	TCHAR * tocken = NULL;
+	int comma;
+	DWORD localdownloadAddress;
+	int cnt=0;
+
+	/// 2010.5.10
+	if(hWrite) /// added.
+	{
+		CloseHandle(hWrite);
+		hWrite = INVALID_HANDLE_VALUE;
+	}
+
+	do {
+	    hWrite = open_file( outPipe);
+		if( cnt++ > USB_OPEN_RETRY ) break;
+	} while( hWrite == INVALID_HANDLE_VALUE || hWrite == NULL );
+
+    if(hWrite==INVALID_HANDLE_VALUE || hWrite==NULL)
+    {
+		///MessageBox(hwnd,TEXT("Can't open USB device.\n"),TEXT("Error"), MB_OK | MB_ICONINFORMATION );
+		EB_Printf(TEXT("[dnw] ++Transmit ERROR++ Can't open USB device.\n"));
+		return FALSE;
+    }
+
+	
+    //////////////
+	EB_Printf(TEXT("[dnw] RAM File; [%s] \n"), szUMONDownloadString[Fileindex] );
+//	tocken = strtok(szDownloadString[Fileindex],",");
+	for ( i = 0; i < FILENAMELEN; i++ )
+	{
+		if ( szUMONDownloadString[Fileindex][i] == ',' )
+		{
+			comma = i;
+			tocken = &szUMONDownloadString[Fileindex][i+1];
+			break;
+		}
+	}
+
+	memcpy(szUmonFileName, szUMONDownloadString[Fileindex], i);
+	szUmonFileName[i] = '\0';
+//	tocken = strtok(NULL,",");
+//	memcpy(szTitleName, szEBOOTTitleName, FILENAMELEN);
+	localdownloadAddress = hex2int(tocken);
+
+	EB_Printf(TEXT("[dnw] RAM ADDRESS ; [0x%X] \n"), localdownloadAddress );
+    
+//    if(result==0) //file open fail
+//    {
+//	CloseHandle(hWrite);
+//	return;
+//    }
+
+    hFile=CreateFile(szUmonFileName,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,0,NULL);
+    if(hFile==INVALID_HANDLE_VALUE)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Open (%s)]\n"), szUmonFileName );
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return FALSE;
+    }
+    
+	///AddTransmitMenu(hwnd, szUmonFileName, localdownloadAddress);
+
+    fileSize=GetFileSize(hFile,NULL);
+
+	if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+    txBuf=(char *)malloc(fileSize+10); 
+    if(txBuf==0)
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:Memory Allocation Fail:(%d)]\n"),fileSize+6 );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		return FALSE;
+    }
+
+    ReadFile(hFile,(void *)(txBuf+8),fileSize,&txBufSize,NULL);
+    if(txBufSize!=fileSize)    
+    {
+		EB_Printf(TEXT("[dnw] [ERROR:File Size(%d) Error]\n"),fileSize );
+		if(hFile) CloseHandle(hFile); /// added.
+		if(hWrite) CloseHandle(hWrite); /// added.
+		if(txBuf) free((void*)txBuf); /// 2010.05.12 added
+		return FALSE;
+    }
+
+    *((DWORD *)txBuf+0)=localdownloadAddress;
+    *((DWORD *)txBuf+1)=fileSize+10;   //attach filesize(n+6+4) 
+    for(i=8;i<(fileSize+8);i++)
+		cs+=(BYTE)(txBuf[i]);
+    *((WORD *)(txBuf+8+fileSize))=cs;   //attach checksum 
+    
+    txBufSize+=10;
+    iTxBuf=0;
+
+    CloseHandle(hFile);
+    
+    threadResult=_beginthread( (void (*)(void *))UsbTxFile, THREAD_STACK_SIZE,(void *)0);
+    
+    if(threadResult!=-1)
+    {
+		//Create the download progress dialogbox.
+		CreateDialog(_hInstance,MAKEINTRESOURCE(IDD_DIALOG1),hwnd,DownloadProgressProc); //modaless
+		//ShowWindow(_hDlgDownloadProgress,SW_SHOW); 
+		//isn't needed because the dialog box already has WS_VISIBLE attribute.
+    }
+    else
+    {
+		EB_Printf("[dnw] [ERROR:Can't creat a thread. Memory is not sufficient]\n");
+    }
+
+    //The dialog box will be closed at the end of TxFile().
+    //free(txBuf) & CloseHandle(hWrite) will be done in TxFile()
+
+	return TRUE;
+
+}
+
+//#endif
+
+

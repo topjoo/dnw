@@ -1,0 +1,477 @@
+;-----------------------------------------
+;How to use the Tx script. 
+; 1) Modify test Tx Script file. 
+; 2) Connect COM port to send TxData. 
+; 3) Press the [Ctrl+F6] key 
+; 4) Select the modified Tx script file. 
+; 5) Press [Send TxData] button. 
+; * Max Char. are 4096 Char. per line.
+;-----------------------------------------
+
+
+[START] 
+
+[SLEEP] 12000
+;/////////////////  BLT 1 /////////////////////////
+;BLT 1: Req to Move to Diag Mode 
+[HEXA] AA 88 01 00 23 
+
+[SLEEP] 15000 
+
+[RANDOM] 550 ; 550 cycle, random numer genration, 1cycle(0x00~0xff) 
+
+[SEQNUM] 100 ; 100 cycle, sequencial numer genration, 1cycle(0x00~0xff) 
+
+
+
+[DO] 
+;======= System Mode ====== 
+
+;BLT 1: Req S/W Version(MCU, System, Map, DMB, GPS) 
+[HEXA] AA 88 0d 00 2F 
+
+;--BLT 1: Req S/W Version (MCU, System, Map, DMB, GPS)  
+[HEXA] AA 88 0D 01 01 2F  ; MCU Version 
+[HEXA] AA 88 0D 01 02 2C  ; System Version 
+[HEXA] AA 88 0D 01 03 2D  ; Map Version 
+[HEXA] AA 88 0D 01 04 2A  ; DMB Module Version 
+[HEXA] AA 88 0D 01 05 2B  ; DR/GPS Module Version 
+
+[SLEEP] 3000  
+
+;BLT 1: Req H/W PCB Version 
+[HEXA] AA 88 0e 00 2C 
+
+[SLEEP] 5000 
+
+;[char]17L66U000045 
+;[hexa] 1d 
+
+;BLT 1: Req Batt. ADC 
+[HEXA] AA 88 32 00 10 
+[sleep] 5000 
+;; 9f9352c8 + 00010000 - 9F9452C8    00042c70 
+
+;;=== Start Write to NV ========== 
+
+;BLT 1: Write Model Name 
+[HEXA] AA 88 3A 05 01 31 37 54 32 7c 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+
+;BLT 1: Write BSN Info 
+[HEXA] AA 88 3A 0D 02 31 37 54 32 31 37 54 32 31 37 2D 37 0b 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;BLT 1: Write MES Info 
+[HEXA] AA 88 3A 1A 03 31 37 54 32 31 37 54 32 31 37 54 32 31 37 54 32 31 37 54 32 31 37 54 2D 37 29 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;BLT 1: Write GPS S/N 
+[HEXA] AA 88 3A 01 04 1d 
+[SLEEP] 6000 
+
+
+;BLT 1: Write DMB S/N 
+[HEXA] AA 88 3A 21 05 31 37 54 32 31 37 54 32 31 37 54 32 2D 2D 54 32 31 37 54 32 31 37 54 32 31 37 54 32 31 37 2D 37 46 
+;; iA-TD4417A26-99T4417ABP116040230 
+[sleep] 6000 
+
+;Write BLT1 
+[HEXA] AA 88 3A 10 10 32 30 31 36 31 30 33 31 31 37 31 35 2D 30 31 30 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;Write BLT2 
+[HEXA] AA 88 3A 10 11 32 30 31 36 31 31 30 31 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;Write FUNC  ;; OK 
+[HEXA] AA 88 3A 10 12 32 30 31 36 31 31 30 32 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;Write Aging ;; OK 
+[HEXA] AA 88 3A 10 13 32 30 31 36 31 31 30 33 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;Write Final 
+[HEXA] AA 88 3A 10 14 32 30 31 36 31 31 30 34 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+
+;Write OQC 
+[HEXA] AA 88 3A 10 15 32 30 31 36 31 31 30 35 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+
+;== Finish Write in NV === 
+
+;BLT 1: Read Nv about BSN Info 
+[HEXA] AA 88 3B 01 02 1A 
+
+[SLEEP] 5000 
+
+;BLT 1: Read Nv about GPS S/N 
+[HEXA] AA 88 3B 01 04 1C 
+[SLEEP] 5000 
+
+;BLT 1: Read Nv about DMB S/N 
+[HEXA] AA 88 3B 01 05 1D 
+[sleep] 5000 
+
+
+;======= TDMB Mode ====== 
+
+;BLT 1: Req to DMB Screen 
+[HEXA] AA 88 21 00 03 
+[sleep] 5000 
+
+;BLT 1: Req Dmb Scan 
+[HEXA] AA 88  22 01 FF FE 
+[sleep] 32000 
+
+
+;BLT 1: Req DMB SNR/CER 
+[HEXA] AA 88 05 00 27 
+[sleep] 5000 
+
+
+;BLT 1: Req DMB RSE ON 
+[HEXA] AA 88 06 00 24 
+[sleep] 15000 
+
+;BLT 1: Req DMB RSE OFF 
+[HEXA] AA 88 07 00 25 
+[sleep] 15000 
+
+
+;======= DR/GPS Mode ====== 
+
+;BLT 1: Req GPS Screen 
+[HEXA] AA 88 26 00 04 
+[sleep] 5000 
+
+;BLT 1: Req GPS SNR For SV 32 
+[HEXA] AA 88 09 01 20 0A 
+[sleep] 3000 
+
+; == Start to NV Write == 
+;BLT 1: Complete BLT1 Process 
+;;[HEXA] AA 88 3A 01 10 09 
+[sleep] 5000 
+
+;BLT 1: Read Nv about BLT1 
+[HEXA] AA 88 3B 01 10 08 
+[sleep] 5000 
+; == End == 
+
+
+;=========== BLT 2 ================== 
+
+;======= TDMB Mode ====== 
+
+;BLT 2: Req to DMB Screen 
+[HEXA] AA 88 21 00 03 
+[sleep] 1000 
+
+;BLT 2: Req Dmb Scan 
+[HEXA] AA 88  22 01 FF FE 
+[sleep] 10000 
+
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+;BLT 2: Req Channel Up Command for DMB 
+[HEXA] AA 88  24 00 06 
+[sleep] 10000 
+
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+
+;BLT 2: Req Channel Down Command for DMB 
+[HEXA] AA 88  25 00 07 
+[sleep] 10000 
+
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+;BLT 2: Req Antenna Detection for DMB 
+[HEXA] AA 88 31 00 13 
+[sleep] 3000 
+
+
+;======= DR/GPS Mode ====== 
+
+;BLT 2: Req DR/GPS Screen Mode 
+[HEXA] AA 88 08 00 2A 
+[sleep] 3000 
+
+;BLT 2: Req Antenna Detection for DR/GPS 
+[HEXA] AA 88 29 00 0B 
+[sleep] 3000 
+
+
+;BLT 2: Req Speed Pulse 
+[HEXA] AA 88 33 00 11 
+[sleep] 3000 
+
+;BLT 2: Req Reverse 
+[HEXA] AA 88 34 00 16 
+[sleep] 3000 
+
+;BLT 2: Req Cold start in GPS TTFF 
+[HEXA] AA 88 2A 01 01 08 
+[sleep] 50,000 
+
+
+;BLT 2: Req Hot Fix Time 
+[HEXA] AA 88 2B 00 09 
+[sleep] 3000 
+
+;BLT 2: Req SV Cnt, SNR that's fix and fix value(1/0) 
+[HEXA] AA 88 09 01 20 0A 
+[SLEEP] 3000 
+
+
+;======= Audio in System mode ====== 
+
+;BLT 2: Req Audio Screen of System Mode 
+[HEXA] AA 88 0a 00 28 
+[sleep] 3000 
+
+;BLT 2: Req 1kHz Level Test with Audio  
+[HEXA] AA 88 0b 00 29 
+[sleep] 3000 
+
+;BLT 2: Req Audio stop 
+[HEXA] AA 88 0c 00 2E 
+[sleep] 3000 
+
+;Write BLT2 
+[HEXA] AA 88 3A 10 11 32 30 31 36 31 31 30 31 31 37 31 35 2D 30 31 33 
+;[char]17L66U000045 
+;[hexa] 1d 
+
+[SLEEP] 6000 
+
+;BLT 2: Read Nv about BLT2 
+[HEXA] AA 88 3B 01 11 09 
+[sleep] 5000 
+
+;///////////////// FUNC ///////////////////////////////////////// 
+
+;======= GYRO TEST In DR/GPS Mode ======= 
+;FUNC : Move GYRO Screen 
+[HEXA] AA 88 2C 00 0E 
+
+[SLEEP] 3000  
+
+;FUNC : Send Result of GYRO Test 
+[HEXA] AA 88 2D 00 0F 
+
+[SLEEP] 3000  
+
+;======= Angle Cal. In System Mode ====== 
+;FUNC : Move to Angle Cal Screen 
+[HEXA] AA 88 3E 00 1C 
+
+[SLEEP] 3000  
+
+;FUNC : Angle Cal. Test 
+[HEXA] AA 88 30 01 01 12 
+
+[SLEEP] 10000  
+
+;Write FUNC  ;; OK 
+[HEXA] AA 88 3A 10 12 32 30 31 36 31 31 30 32 31 37 31 35 2D 30 31 33 
+
+[SLEEP] 6000 
+
+;BLT 2: Read Nv about BLT2 
+;[HEXA] AA 88 3B 01 12 0A 
+[sleep] 5000 
+
+; ///////////////// ETC - 진단 모든 기능 테스트 //// 
+[HEXA]AA 88 1B 01 00 38     ;// S/W Version Info. Screen 
+[sleep] 3000 
+[HEXA]AA 88 1B 01 01 39     ;// Angle Cal. Screen 
+[sleep] 3000 
+;FUNC : Angle Cal. Test 
+[HEXA] AA 88 30 01 01 12  
+[SLEEP] 10000   
+[HEXA]AA 88 30 01 03 10 
+[SLEEP] 10000   
+[HEXA]AA 88 30 01 0a 19  
+[SLEEP] 10000  
+[HEXA]AA 88 30 01 0f 1c 
+
+[SLEEP] 11000 
+
+[HEXA]AA 88 1B 01 02 3A     ;// System Verify and Factory Reset Screen 
+[sleep] 3000 
+[HEXA]AA 88 14 01 00 37 
+[sleep] 5000 
+[HEXA]AA 88 13 00 31    ;// factory reset 
+[sleep] 10000 
+
+[HEXA]AA 88 1B 01 03 3B     ;// USB Test Screen 
+[sleep] 3000 
+
+[HEXA]AA 88 15 01 01 37    ;// USB Ping Test 
+[sleep] 10000 
+[HEXA]AA 88 15 01 02 34    ;// USB Write Test  
+[sleep] 10000 
+
+[HEXA]AA 88 15 01 03 35    ;// USB Read Test  
+[sleep] 10000 
+
+[HEXA]AA 88 1B 01 04 3C     ;// Audio Test Screen 
+[sleep] 5000 
+[HEXA]AA 88 19 01 00 3A     ;// Audio 100Hz Test 
+[sleep] 10000 
+[HEXA]AA 88 19 01 02 38     ;// Audio 10kHz Test 
+[sleep] 10000 
+[HEXA]AA 88 19 01 03 39     ;// Audio EWS Test 
+[sleep] 10000 
+[HEXA]AA 88 19 01 04 3E     ;// Audio Navi Test 
+[sleep] 10000 
+[HEXA]AA 88 18 01 01 3A     ;// Audio Volume Up 
+[sleep] 6000 
+[HEXA]AA 88 18 01 01 3A     ;// Audio Volume Up 
+[sleep] 6000 
+[HEXA]AA 88 18 01 02 39     ;// Audio Volume Down 
+[sleep] 6000 
+[HEXA]AA 88 18 01 00 3B     ;// Audio Volume Default 
+[sleep] 5000 
+
+
+[HEXA] AA 88 0c 00 2E       ; Req Audio stop 
+[sleep] 3000 
+
+
+; ================================================================== 
+;[HEXA]AA 88 1B 01 05 3D     ;// Log On/Off Screen 
+;[sleep] 3000 
+
+;[HEXA]AA 88 10 06 00 10 00 08  01 00 2D ;// log on 
+;[sleep] 7000 
+;[HEXA]AA 88 10 06 00 17 01 88  01 00 ab // Log on 
+;[sleep] 7000 
+;[HEXA]AA 88 11 00 33 // log off 
+;[sleep] 7000 
+
+;[HEXA]AA 88 10 06 00 10 00 88  01 20 8d ;// Log on and file save  
+;[sleep] 7000 
+;[HEXA]AA 88 10 06 00 10 00 88  01 00 ad ;// Log on 
+;[sleep] 7000 
+; ================================================================== 
+
+
+[HEXA]AA 88 1C 01 00 3F     ;// Micom Main(버젼정보 등) Screen 
+[sleep] 3000 
+[HEXA]AA 88 1C 01 01 3E     ;// Power Voltage Screen 
+[sleep] 3000 
+
+[HEXA]AA 88 1D 01 00 3E     ;/ DMB Main(채널스캔 및 이동 등) Screen 
+[sleep] 3000 
+;BLT 2: Req Dmb Scan 
+[HEXA] AA 88  22 01 FF FE 
+[sleep] 10000 
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+[HEXA] AA 88  22 01 03 02    ; // 8B 
+[sleep] 7000 
+
+[HEXA] AA 88  22 01 0b 0a    ; // 10B 
+[sleep] 7000 
+
+[HEXA] AA 88  22 01 0f 0e    ; // 12B 
+[sleep] 7000 
+
+;BLT 2: Req Channel Up Command for DMB 
+[HEXA] AA 88  24 00 06 
+[sleep] 10000 
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+;BLT 2: Req Channel Down Command for DMB 
+[HEXA] AA 88  25 00 07 
+[sleep] 10000 
+;BLT 2: Req Channel's Info for DMB 
+[HEXA] AA 88 3C 00 1E 
+[sleep] 10000 
+
+[HEXA]AA 88 1D 01 01 3F     ;// DMB TPEG Service Screen 
+[sleep] 3000 
+[HEXA]AA 88 1D 01 02 3C     ;// DMB Module Test Screen 
+[sleep] 3000 
+[HEXA]AA 88 17 00 35     ;// DMB Module Test 
+[sleep] 10000 
+
+[HEXA]AA 88 1E 01 00 3D     ;// DR/GPS Main(TTFF) Screen 
+[sleep] 3000 
+;BLT 2: Req Hot start in GPS TTFF 
+[HEXA] AA 88 2A 01 03 0A 
+[sleep] 40,000 
+
+[HEXA]AA 88 1E 01 01 3C     ;// Gryo Counts and Accuracy Info Screen 
+[sleep] 3000 
+[HEXA]AA 88 1E 01 02 3F     ;// GPS Status Screen 
+[sleep] 3000 
+[HEXA]AA 88 1E 01 03 3E     ;// Satellite Info. Screen 
+[sleep] 3000 
+
+[HEXA]AA 88 3E 00 1C    ;// angle cal screen 
+[sleep] 7000  
+[HEXA]AA 88 21 00 03    ;// dmb screen 
+[sleep] 5000 
+[HEXA]AA 88 12 00 30    ;// factory screen 
+[sleep] 5000 
+[HEXA]AA 88 13 00 31    ;// factory reset 
+[sleep] 10000 
+[HEXA]AA 88 0a 00 28    ;// audio screen 
+[sleep] 5000 
+[HEXA]AA 88 1B 01 00 38     ;// S/W Version Info. Screen 
+[sleep] 3000 
+
+; == 재부팅 == 
+;[HEXA] AA 88 3D 00 1F 
+;[sleep] 10000 
+
+
+[WHILE] 1000 
+
+[END] 
+
+;================================================== 

@@ -1,0 +1,52 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: dnw - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP3D.tmp" with contents
+[
+/nologo /MT /W3 /GX /O2 /I "C:\WINDDK\2600\inc\w2k" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR"Release/" /Fp"Release/dnw.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"D:\Works\DNW0.50L01\d_box.cpp"
+"D:\Works\DNW0.50L01\dnw.cpp"
+"D:\Works\DNW0.50L01\Engine.cpp"
+"D:\Works\DNW0.50L01\fileopen.cpp"
+"D:\Works\DNW0.50L01\font.cpp"
+"D:\Works\DNW0.50L01\usbtxrx.cpp"
+]
+Creating command line "cl.exe @C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP3D.tmp" 
+Creating temporary file "C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP3E.tmp" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib usbd.lib setupapi.lib /nologo /subsystem:windows /incremental:no /pdb:"Release/dnw.pdb" /machine:I386 /out:"Release/dnw.exe" /libpath:"C:\WINDDK\2600\lib\i386\free" 
+.\Release\d_box.obj
+.\Release\dnw.obj
+.\Release\Engine.obj
+.\Release\fileopen.obj
+.\Release\font.obj
+.\Release\usbtxrx.obj
+.\Release\dnw.res
+.\Release\rwbulk.obj
+]
+Creating command line "link.exe @C:\DOCUME~1\ADMINI~1\LOCALS~1\Temp\RSP3E.tmp"
+<h3>Output Window</h3>
+Compiling...
+d_box.cpp
+D:\Works\DNW0.50L01\d_box.cpp(252) : warning C4018: '<' : signed/unsigned mismatch
+D:\Works\DNW0.50L01\d_box.cpp(259) : warning C4018: '<' : signed/unsigned mismatch
+D:\Works\DNW0.50L01\d_box.cpp(266) : warning C4018: '<' : signed/unsigned mismatch
+dnw.cpp
+Engine.cpp
+fileopen.cpp
+font.cpp
+usbtxrx.cpp
+Linking...
+
+
+
+<h3>Results</h3>
+dnw.exe - 0 error(s), 3 warning(s)
+</pre>
+</body>
+</html>

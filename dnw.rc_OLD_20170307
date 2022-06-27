@@ -1,0 +1,816 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 2 resource.
+//
+#include "afxres.h"
+
+/////////////////////////////////////////////////////////////////////////////
+#undef APSTUDIO_READONLY_SYMBOLS
+
+/////////////////////////////////////////////////////////////////////////////
+// Korean resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_KOR)
+#ifdef _WIN32
+LANGUAGE LANG_KOREAN, SUBLANG_DEFAULT
+#pragma code_page(949)
+#endif //_WIN32
+
+#ifdef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// TEXTINCLUDE
+//
+
+1 TEXTINCLUDE 
+BEGIN
+    "resource.h\0"
+END
+
+2 TEXTINCLUDE 
+BEGIN
+    "#include ""afxres.h""\r\n"
+    "\0"
+END
+
+3 TEXTINCLUDE 
+BEGIN
+    "\r\n"
+    "\0"
+END
+
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Icon
+//
+
+// Icon with lowest ID value placed first to ensure application icon
+// remains consistent on all systems.
+IDI_ICON1               ICON                    "icon1.ico"
+IDI_ICON2               ICON                    "icon2.ico"
+/////////////////////////////////////////////////////////////////////////////
+//
+// Dialog
+//
+
+IDD_DIALOG1 DIALOG  20, 80, 314, 20
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+FONT 10, "System"
+BEGIN
+    CONTROL         "Progress1",IDC_PROGRESS1,"msctls_progress32",WS_BORDER,7,7,300,7
+END
+
+
+
+IDD_DIALOG6 DIALOGEX 20, 80, 314, 80
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU 
+FONT 10, "System"
+BEGIN
+
+	CONTROL 		"Progress6",IDC_PROGRESS6,"msctls_progress32",WS_BORDER,7,7,300,12
+	LTEXT			"FileName:",IDC_STATIC,8,28,40,10,SS_NOTIFY
+	EDITTEXT		IDC_PROC_FILENAME,43,27,264,12,ES_AUTOHSCROLL | WS_DISABLED
+
+	LTEXT			"Tx Bytes:",IDC_PROC_TX_BYTES,8,50,200,10,SS_NOTIFY
+	PUSHBUTTON		"Cancel",IDCANCEL,227,44,80,31
+
+END
+
+
+
+
+
+// -------------------------------------------------
+// -- Setting --------------------------------------
+IDD_DIALOG2 DIALOGEX 40, 10, 335, 342
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+CAPTION  "UART/USB Options"
+FONT 10, "System", 0, 0, 0x0
+BEGIN
+
+
+
+#define LN1 		22  /// Line 1ea
+#define LN2 		32  /// Line 1ea
+#define LN3 		44  /// Line 1ea
+#define LN4 		52  /// Line 1ea
+#define LN5 		66  /// Line 1ea
+#define TH  		10  /// text height
+#define EH 			11  /// edit box height
+
+#define LEFT_POS 	6
+
+
+
+	DEFPUSHBUTTON   "OK",    IDOK,     245,254,85,37, WS_TABSTOP
+	PUSHBUTTON      "Cancel",IDCANCEL, 245,300,85,37
+
+	GROUPBOX        "[ Serial Port ]",IDC_STATIC,        3,  2, 235, 243
+	GROUPBOX        " Baud rate ",    IDC_STATIC, LEFT_POS, 11,  46, 231,BS_CENTER
+	GROUPBOX        " COM Port ",     IDC_STATIC,       55, 11, 100, 231
+
+
+	CONTROL         "921,600",IDC_RADIO921600, "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,10,21,40,10
+	CONTROL         "576,000",IDC_RADIO576000, "Button",BS_AUTORADIOBUTTON, 10, 32,40,10
+	CONTROL         "460,800",IDC_RADIO460800, "Button",BS_AUTORADIOBUTTON, 10, 43,40,10
+	CONTROL         "380,400",IDC_RADIO380400, "Button",BS_AUTORADIOBUTTON, 10, 54,40,10
+	CONTROL         "312,500",IDC_RADIO312500, "Button",BS_AUTORADIOBUTTON, 10, 65,40,10
+	CONTROL         "256,000",IDC_RADIO256000, "Button",BS_AUTORADIOBUTTON, 10, 76,40,10
+	CONTROL         "230,400",IDC_RADIO230400, "Button",BS_AUTORADIOBUTTON, 10, 87,40,10
+	CONTROL         "153,600",IDC_RADIO153600, "Button",BS_AUTORADIOBUTTON, 10, 98,40,10
+	CONTROL         "128,000",IDC_RADIO128000, "Button",BS_AUTORADIOBUTTON, 10,109,40,10
+	CONTROL         "115,200",IDC_RADIO115200,  "Button",BS_AUTORADIOBUTTON, 10,120,40,10
+	CONTROL         " 76,800",IDC_RADIO76800,  "Button",BS_AUTORADIOBUTTON, 10,131,40,10
+	CONTROL         " 57,600",IDC_RADIO57600,  "Button",BS_AUTORADIOBUTTON, 10,142,40,10
+	CONTROL         " 56,000",IDC_RADIO56000,  "Button",BS_AUTORADIOBUTTON, 10,153,40,10
+	CONTROL         " 38,400",IDC_RADIO38400,  "Button",BS_AUTORADIOBUTTON, 10,164,40,10
+	CONTROL         " 31,250",IDC_RADIO31250,  "Button",BS_AUTORADIOBUTTON, 10,175,40,10
+	CONTROL         " 19,200",IDC_RADIO19200,  "Button",BS_AUTORADIOBUTTON, 10,186,40,10
+	CONTROL         " 14,400",IDC_RADIO14400,   "Button",BS_AUTORADIOBUTTON, 10,197,40,10
+	CONTROL         "  9,600",IDC_RADIO9600,   "Button",BS_AUTORADIOBUTTON, 10,208,40,10
+	CONTROL         "  4,800",IDC_RADIO4800,   "Button",BS_AUTORADIOBUTTON, 10,219,40,10
+	CONTROL         "  2,400",IDC_RADIO2400,   "Button",BS_AUTORADIOBUTTON, 10,230,40,10
+
+	CONTROL         " 0",IDC_RADIOCOM0,  "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,60, 21, 20,10
+	CONTROL         " 1",IDC_RADIOCOM1,  "Button",BS_AUTORADIOBUTTON, 60,  32, 20,10
+	CONTROL         " 2",IDC_RADIOCOM2,  "Button",BS_AUTORADIOBUTTON, 60,  43, 20,10
+	CONTROL         " 3",IDC_RADIOCOM3,  "Button",BS_AUTORADIOBUTTON, 60,  54, 20,10
+	CONTROL         " 4",IDC_RADIOCOM4,  "Button",BS_AUTORADIOBUTTON, 60,  65, 20,10
+	CONTROL         " 5",IDC_RADIOCOM5,  "Button",BS_AUTORADIOBUTTON, 60,  76, 20,10
+	CONTROL         " 6",IDC_RADIOCOM6,  "Button",BS_AUTORADIOBUTTON, 60,  87, 20,10
+	CONTROL         " 7",IDC_RADIOCOM7,  "Button",BS_AUTORADIOBUTTON, 60,  98, 20,10
+	CONTROL         " 8",IDC_RADIOCOM8,  "Button",BS_AUTORADIOBUTTON, 60, 109, 20,10
+	CONTROL         " 9",IDC_RADIOCOM9,  "Button",BS_AUTORADIOBUTTON, 60, 120, 20,10
+	CONTROL         "10",IDC_RADIOCOM10, "Button",BS_AUTORADIOBUTTON, 60, 131, 20,10
+	CONTROL         "11",IDC_RADIOCOM11, "Button",BS_AUTORADIOBUTTON, 60, 142, 20,10
+	CONTROL         "12",IDC_RADIOCOM12, "Button",BS_AUTORADIOBUTTON, 60, 153, 20,10
+	CONTROL         "13",IDC_RADIOCOM13, "Button",BS_AUTORADIOBUTTON, 60, 164, 20,10
+	CONTROL         "14",IDC_RADIOCOM14, "Button",BS_AUTORADIOBUTTON, 60, 175, 20,10
+	CONTROL         "15",IDC_RADIOCOM15, "Button",BS_AUTORADIOBUTTON, 60, 186, 20,10
+	CONTROL         "16",IDC_RADIOCOM16, "Button",BS_AUTORADIOBUTTON, 60, 197, 20,10
+	CONTROL         "17",IDC_RADIOCOM17, "Button",BS_AUTORADIOBUTTON, 60, 208, 20,10
+	CONTROL         "18",IDC_RADIOCOM18, "Button",BS_AUTORADIOBUTTON, 60, 219, 20,10
+	CONTROL         "19",IDC_RADIOCOM19, "Button",BS_AUTORADIOBUTTON, 60, 230, 20,10
+    
+	CONTROL         "20",IDC_RADIOCOM20, "Button",BS_AUTORADIOBUTTON, 83,  21, 20,10
+	CONTROL         "21",IDC_RADIOCOM21, "Button",BS_AUTORADIOBUTTON, 83,  32, 20,10
+	CONTROL         "22",IDC_RADIOCOM22, "Button",BS_AUTORADIOBUTTON, 83,  43, 20,10
+	CONTROL         "23",IDC_RADIOCOM23, "Button",BS_AUTORADIOBUTTON, 83,  54, 20,10
+	CONTROL         "24",IDC_RADIOCOM24, "Button",BS_AUTORADIOBUTTON, 83,  65, 20,10
+	CONTROL         "25",IDC_RADIOCOM25, "Button",BS_AUTORADIOBUTTON, 83,  76, 20,10
+	CONTROL         "26",IDC_RADIOCOM26, "Button",BS_AUTORADIOBUTTON, 83,  87, 20,10
+	CONTROL         "27",IDC_RADIOCOM27, "Button",BS_AUTORADIOBUTTON, 83,  98, 20,10
+	CONTROL         "28",IDC_RADIOCOM28, "Button",BS_AUTORADIOBUTTON, 83, 109, 20,10
+	CONTROL         "29",IDC_RADIOCOM29, "Button",BS_AUTORADIOBUTTON, 83, 120, 20,10
+	CONTROL         "30",IDC_RADIOCOM30, "Button",BS_AUTORADIOBUTTON, 83, 131, 20,10
+	CONTROL         "31",IDC_RADIOCOM31, "Button",BS_AUTORADIOBUTTON, 83, 142, 20,10
+	CONTROL         "32",IDC_RADIOCOM32, "Button",BS_AUTORADIOBUTTON, 83, 153, 20,10
+	CONTROL         "33",IDC_RADIOCOM33, "Button",BS_AUTORADIOBUTTON, 83, 164, 20,10
+	CONTROL         "34",IDC_RADIOCOM34, "Button",BS_AUTORADIOBUTTON, 83, 175, 20,10
+	CONTROL         "35",IDC_RADIOCOM35, "Button",BS_AUTORADIOBUTTON, 83, 186, 20,10
+	CONTROL         "36",IDC_RADIOCOM36, "Button",BS_AUTORADIOBUTTON, 83, 197, 20,10
+	CONTROL         "37",IDC_RADIOCOM37, "Button",BS_AUTORADIOBUTTON, 83, 208, 20,10
+	CONTROL         "38",IDC_RADIOCOM38, "Button",BS_AUTORADIOBUTTON, 83, 219, 20,10
+	CONTROL         "39",IDC_RADIOCOM39, "Button",BS_AUTORADIOBUTTON, 83, 230, 20,10
+
+	CONTROL 		"40",IDC_RADIOCOM40, "Button",BS_AUTORADIOBUTTON, 106,  21, 20,10
+	CONTROL 		"41",IDC_RADIOCOM41, "Button",BS_AUTORADIOBUTTON, 106,  32, 20,10
+	CONTROL 		"42",IDC_RADIOCOM42, "Button",BS_AUTORADIOBUTTON, 106,  43, 20,10
+	CONTROL 		"43",IDC_RADIOCOM43, "Button",BS_AUTORADIOBUTTON, 106,  54, 20,10
+	CONTROL 		"44",IDC_RADIOCOM44, "Button",BS_AUTORADIOBUTTON, 106,  65, 20,10
+	CONTROL 		"45",IDC_RADIOCOM45, "Button",BS_AUTORADIOBUTTON, 106,  76, 20,10
+	CONTROL 		"46",IDC_RADIOCOM46, "Button",BS_AUTORADIOBUTTON, 106,  87, 20,10
+	CONTROL 		"47",IDC_RADIOCOM47, "Button",BS_AUTORADIOBUTTON, 106,  98, 20,10
+	CONTROL 		"48",IDC_RADIOCOM48, "Button",BS_AUTORADIOBUTTON, 106, 109, 20,10
+	CONTROL 		"49",IDC_RADIOCOM49, "Button",BS_AUTORADIOBUTTON, 106, 120, 20,10
+	CONTROL 		"50",IDC_RADIOCOM50, "Button",BS_AUTORADIOBUTTON, 106, 131, 20,10
+	CONTROL 		"51",IDC_RADIOCOM51, "Button",BS_AUTORADIOBUTTON, 106, 142, 20,10
+	CONTROL 		"52",IDC_RADIOCOM52, "Button",BS_AUTORADIOBUTTON, 106, 153, 20,10
+	CONTROL 		"53",IDC_RADIOCOM53, "Button",BS_AUTORADIOBUTTON, 106, 164, 20,10
+	CONTROL 		"54",IDC_RADIOCOM54, "Button",BS_AUTORADIOBUTTON, 106, 175, 20,10
+	CONTROL 		"55",IDC_RADIOCOM55, "Button",BS_AUTORADIOBUTTON, 106, 186, 20,10
+	CONTROL 		"56",IDC_RADIOCOM56, "Button",BS_AUTORADIOBUTTON, 106, 197, 20,10
+	CONTROL 		"57",IDC_RADIOCOM57, "Button",BS_AUTORADIOBUTTON, 106, 208, 20,10
+	CONTROL 		"58",IDC_RADIOCOM58, "Button",BS_AUTORADIOBUTTON, 106, 219, 20,10
+	CONTROL 		"59",IDC_RADIOCOM59, "Button",BS_AUTORADIOBUTTON, 106, 230, 20,10
+
+    CONTROL         "60",IDC_RADIOCOM60,"Button",BS_AUTORADIOBUTTON,129,21,20,10
+    CONTROL         "61",IDC_RADIOCOM61,"Button",BS_AUTORADIOBUTTON,129,32,20,10
+    CONTROL         "62",IDC_RADIOCOM62,"Button",BS_AUTORADIOBUTTON,129,43,20,10
+    CONTROL         "63",IDC_RADIOCOM63,"Button",BS_AUTORADIOBUTTON,129,54,20,10
+    CONTROL         "64",IDC_RADIOCOM64,"Button",BS_AUTORADIOBUTTON,129,65,20,10
+    CONTROL         "65",IDC_RADIOCOM65,"Button",BS_AUTORADIOBUTTON,129,76,20,10
+    CONTROL         "66",IDC_RADIOCOM66,"Button",BS_AUTORADIOBUTTON,129,87,20,10
+    CONTROL         "67",IDC_RADIOCOM67,"Button",BS_AUTORADIOBUTTON,129,98,20,10
+    CONTROL         "68",IDC_RADIOCOM68,"Button",BS_AUTORADIOBUTTON,129,109,20,10
+    CONTROL         "69",IDC_RADIOCOM69,"Button",BS_AUTORADIOBUTTON,129,120,20,10
+    CONTROL         "70",IDC_RADIOCOM70,"Button",BS_AUTORADIOBUTTON,129,131,20,10
+    CONTROL         "71",IDC_RADIOCOM71,"Button",BS_AUTORADIOBUTTON,129,142,20,10
+    CONTROL         "72",IDC_RADIOCOM72,"Button",BS_AUTORADIOBUTTON,129,153,20,10
+    CONTROL         "73",IDC_RADIOCOM73,"Button",BS_AUTORADIOBUTTON,129,164,20,10
+    CONTROL         "74",IDC_RADIOCOM74,"Button",BS_AUTORADIOBUTTON,129,175,20,10
+    CONTROL         "75",IDC_RADIOCOM75,"Button",BS_AUTORADIOBUTTON,129,186,20,10
+    CONTROL         "76",IDC_RADIOCOM76,"Button",BS_AUTORADIOBUTTON,129,197,20,10
+    CONTROL         "77",IDC_RADIOCOM77,"Button",BS_AUTORADIOBUTTON,129,208,20,10
+    CONTROL         "78",IDC_RADIOCOM78,"Button",BS_AUTORADIOBUTTON,129,219,20,10
+    CONTROL         "79",IDC_RADIOCOM79,"Button",BS_AUTORADIOBUTTON,129,230,20,10
+
+#ifdef COM_SETTINGS /// 2012.07.11
+	/* COM port ; parity */
+    GROUPBOX        " COM Parity ",IDC_STATIC, 160, 11, 74, LN3
+    CONTROL         "None",    IDC_COM_NOPARITY,   "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 164, 21,30,TH
+    CONTROL         "Odd",     IDC_COM_ODDPARITY,  "Button",BS_AUTORADIOBUTTON, 200, 21,30,TH
+    CONTROL         "Even",    IDC_COM_EVENPARITY, "Button",BS_AUTORADIOBUTTON, 164, 31,30,TH
+    CONTROL         "Mark",    IDC_COM_MARKPARITY, "Button",BS_AUTORADIOBUTTON, 200, 31,30,TH
+    CONTROL         "Space",   IDC_COM_SPACEPARITY,"Button",BS_AUTORADIOBUTTON, 164, 41,30,TH
+
+	/* COM port ; Stop */
+    GROUPBOX        " COM Stopbit ",IDC_STATIC,160, 58, 74, LN2
+    CONTROL         "1Stop",   IDC_COM_ONESTOPBIT,   "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 164, 66,30,TH
+    CONTROL         "2Stop",   IDC_COM_TWOSTOPBITS,  "Button",BS_AUTORADIOBUTTON, 200, 66,30,TH
+    CONTROL         "1.5Stop", IDC_COM_ONE5STOPBITS, "Button",BS_AUTORADIOBUTTON, 164, 77,35,TH
+
+	/* COM port ; Data Bit*/
+    GROUPBOX        " COM Databit ",IDC_STATIC, 160, 91, 74, LN1
+    CONTROL         "7bit",    IDC_COM_DATA_7BIT, "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 164, 101,30,TH
+    CONTROL         "8bit",    IDC_COM_DATA_8BIT, "Button",BS_AUTORADIOBUTTON, 200, 101,30,TH
+
+    DEFPUSHBUTTON   "Set default COM", ID_COM_DEFAULT,     160,118,74,15
+
+
+//	COMBOBOX		IDC_COMBO_SELPORT, 108, 118+40, 61,81,CBS_DROPDOWN | CBS_SORT | WS_VSCROLL | WS_TABSTOP
+
+
+    GROUPBOX        " COM Baud rate ", IDC_STATIC,  160, 217, 74, 25
+    EDITTEXT        IDC_EDIT2,                  165, 227, 48, EH,ES_AUTOHSCROLL
+    LTEXT           "bps",        IDC_STATIC,   216, 228, 12, TH
+#endif
+
+
+    GROUPBOX        "[ Timestamp (Ctrl+T) ]",IDC_STATIC, 246,  2, 85, LN2
+    CONTROL         "None",        IDC_LOCALTIME_NONE,      "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 250, 12,30,TH
+    CONTROL         "Time",        IDC_LOCALTIME_TIMEONLY,  "Button",BS_AUTORADIOBUTTON, 290, 12, 40, TH
+    CONTROL         "Date/Time",   IDC_LOCALTIME_DATETIME,  "Button",BS_AUTORADIOBUTTON, 250, 23, 45, TH
+
+
+    GROUPBOX        "[ Background Color ]",IDC_STATIC, 246,  38, 85, 34
+    CONTROL         "Default", IDC_COLOR_TYPE_GRAY_DEF,   "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 250, 48,40,TH
+    CONTROL         "Black",   IDC_COLOR_TYPE_BLACK,  "Button",BS_AUTORADIOBUTTON, 290, 48,40,TH
+    CONTROL         "Gray1",   IDC_COLOR_TYPE_GRAY1,  "Button",BS_AUTORADIOBUTTON, 250, 59,40,TH
+    CONTROL         "Gray2",   IDC_COLOR_TYPE_GRAY2,  "Button",BS_AUTORADIOBUTTON, 290, 59,40,TH
+
+    GROUPBOX        "[ Font Style ]",IDC_STATIC, 246, 76, 85, 33
+    CONTROL         "OEM",     IDC_FONT0_OEM_FIX,    "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 250, 86,40,TH
+    CONTROL         "ANSI",    IDC_FONT1_ANSI_FIX,   "Button",BS_AUTORADIOBUTTON, 290,  86,30,TH
+    CONTROL         "Device",  IDC_FONT2_DEVICE,     "Button",BS_AUTORADIOBUTTON, 250,  97,35,TH
+    CONTROL         "System",  IDC_FONT3_SYSTEM_FIX, "Button",BS_AUTORADIOBUTTON, 290,  97,35,TH
+
+#if HEXA_MODE_SUPPORT	/* 2011.02.08 Hexa mode display */
+	/* for AVC-LAN */
+    GROUPBOX        "[ mode (Shift+F5) ]",IDC_STATIC, 246, 113, 85, 50
+    CONTROL         "Text",        IDC_OUT_TEXT_MODE,   "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 250, 123,30,TH
+    CONTROL         "Hexa1 Line#", IDC_OUT_HEXA1_MODE,  "Button",BS_AUTORADIOBUTTON, 250, 135,50,TH
+    EDITTEXT        IDC_EDIT_HEX1_COL,        306, 134, 20, EH,ES_AUTOHSCROLL
+    CONTROL         "Hexa2 EndCh", IDC_OUT_HEXA2_MODE,  "Button",BS_AUTORADIOBUTTON, 250, 148,50,TH
+    EDITTEXT        IDC_EDIT_HEX2_COL,        306, 147, 20, EH,ES_AUTOHSCROLL
+#endif
+
+#if USER_SCREEN_BUF_SIZE // 2016.02.14
+	/* Screen Buffer size */
+    GROUPBOX        " Screen Buffer size ",IDC_STATIC, 246, 166, 85, LN5
+    CONTROL         "Huge (100MB)",   IDC_SCR_BUF_HUGE,     "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 250, 176,60,TH
+    CONTROL         "Large (60MB)",   IDC_SCR_BUF_LARGE,    "Button",BS_AUTORADIOBUTTON, 250, 187,60,TH
+    CONTROL         "Middle (20MB)",  IDC_SCR_BUF_MIDDLE,   "Button",BS_AUTORADIOBUTTON, 250, 198,60,TH
+    CONTROL         "Small (5MB)",    IDC_SCR_BUF_SMALL,    "Button",BS_AUTORADIOBUTTON, 250, 209,60,TH
+    CONTROL         "Smallest (2MB)", IDC_SCR_BUF_SMALLEST, "Button",BS_AUTORADIOBUTTON, 250, 220,60,TH
+#endif
+
+#if 0
+	GROUPBOX		"[ Tx Data (F6) ]",IDC_STATIC, 190, 141, 85, 47
+	CONTROL 		"Char",    IDC_TX_CHAR_MODE,	"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 194, 151,30,TH
+	CONTROL 		"Hexa",    IDC_TX_HEXA_MODE,	"Button",BS_AUTORADIOBUTTON, 194, 162,30,TH
+	EDITTEXT		IDC_TX_EDIT_CHAR_COL,		  225, 151, 45, 10,ES_AUTOHSCROLL
+	EDITTEXT		IDC_TX_EDIT_HEXA_COL,		  225, 162, 45, 10,ES_AUTOHSCROLL
+	CONTROL 		"MsgOff",  IDC_TX_DISPLAY_OFF,	"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 194, 175,35,TH
+	CONTROL 		"MsgOn",   IDC_TX_DISPLAY_ON,	"Button",BS_AUTORADIOBUTTON, 235, 175,35,TH
+#endif
+
+
+#if LOG_SAVE_MENU_IN_SETUP // 2016.02.24
+    GROUPBOX        "[ Log (Ctrl+Alt+L) ]",IDC_STATIC, 190, 190, 85, 34
+    CONTROL         "No/Ended",   IDC_RADIO_MSG_SAVE_OFF, "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 194, 200,50,TH
+    CONTROL         "Yes/Create", IDC_RADIO_MSG_SAVE_ON,  "Button",BS_AUTORADIOBUTTON, 194, 211, 50,TH
+#endif
+
+
+
+
+    GROUPBOX        "[ USB Settings ]",IDC_STATIC,  3,  250, 235, 90
+
+    GROUPBOX        " CPU Type ",IDC_STATIC, LEFT_POS,  260, 228, LN1
+    CONTROL         "SMDK6410 ",  IDC_CPU_SMDK6410,  "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 12, 269,47,TH
+    CONTROL         "SMDKC100 ",  IDC_CPU_SMDKC100,  "Button",BS_AUTORADIOBUTTON,  70, 269, 47, TH
+    CONTROL         "OtherCPU ",  IDC_CPU_OTHER,     "Button",BS_AUTORADIOBUTTON, 130, 269, 47, TH
+
+
+    GROUPBOX        " USB Port Download Address ",   IDC_STATIC,  LEFT_POS, 285, 116, 25
+    EDITTEXT        IDC_EDIT1,                     40, 295, 75, EH,ES_AUTOHSCROLL
+    LTEXT           "Addr. :",  IDC_STATIC,        12, 296, 25, TH
+    /// LTEXT           "Download Addr.",  IDC_STATIC, 12, 296, 55, 10
+
+    GROUPBOX        " Auto Download (F4) ",IDC_STATIC, LEFT_POS, 315, 116, LN1
+    CONTROL         "Auto Off", IDC_RADIO_AUTO_SEND_OFF, "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,12,325,40,TH
+    CONTROL         "Auto On",  IDC_RADIO_AUTO_SEND_ON,  "Button",BS_AUTORADIOBUTTON, 65,325,40,TH
+
+
+    GROUPBOX        " Retry USB ",IDC_STATIC, 125, 285, 108, LN4
+    CONTROL         "Default",  IDC_RETRY_USB_DEFAULT,    "Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP, 135, 295,40,TH
+    CONTROL         "20 times", IDC_RETRY_USB_20_TIMES,   "Button",BS_AUTORADIOBUTTON, 135, 305, 40,TH
+    CONTROL         "30 times", IDC_RETRY_USB_30_TIMES,   "Button",BS_AUTORADIOBUTTON, 135, 315, 40,TH
+    CONTROL         "40 times", IDC_RETRY_USB_40_TIMES,   "Button",BS_AUTORADIOBUTTON, 135, 325, 40,TH
+
+END
+
+
+
+#if USE_HEX2BIN_CONVERT // 2016.03.04
+
+// -------------------------------------------------
+// -- Hex to binary --------------------------------
+// -------------------------------------------------
+IDD_DIALOG3 DIALOGEX 40, 10, 270, 215
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU 
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+CAPTION "Convert Hex2Binary"
+FONT 10, "System", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "Clear Screen",ID_HEX2BIN_CLEAR_SCR,10,180,67,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Convert",IDOK,91,180,96,30,BS_CENTER
+    PUSHBUTTON      "Exit",IDCANCEL,200,180,62,30,BS_CENTER
+
+
+    GROUPBOX        "[ Intel / Motorola S-record Hex File* ]",IDC_STATIC,3,2,264,81
+    DEFPUSHBUTTON   "Input File",ID_HEX2BIN_INPUT,6,15,45,29,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Output File",ID_HEX2BIN_OUTPUT,6,50,45,29,BS_CENTER|WS_DISABLED|NOT WS_TABSTOP
+
+    EDITTEXT        IDC_HEX2BIN_EDIT_INFILE,55,15,205,14,ES_AUTOHSCROLL | NOT WS_TABSTOP
+    EDITTEXT        IDC_HEX2BIN_EDIT_OUTFILE,55,50,205,14,ES_AUTOHSCROLL|WS_DISABLED | NOT WS_TABSTOP
+    EDITTEXT        IDC_HEX2BIN_EDIT_INFILE_SH,55,30,205,14,ES_AUTOHSCROLL|WS_DISABLED | NOT WS_TABSTOP
+    EDITTEXT        IDC_HEX2BIN_EDIT_OUTFILE_SH,55,65,205,14,ES_AUTOHSCROLL|WS_DISABLED | NOT WS_TABSTOP
+
+
+
+    GROUPBOX        "[ Hex Type* ]",IDC_STATIC,3,90,110,24
+    CONTROL         "Intel",ID_TYPE_INTEL_FAMILY,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,10,100,30,10
+    CONTROL         "Motorola S-Rec",ID_TYPE_MOTOROLA_FAMILY,"Button",BS_AUTORADIOBUTTON,46,100,60,10
+
+    GROUPBOX        "[ Checksum verify* ]",IDC_STATIC,118,90,70,24
+    CONTROL         "Off",ID_CRC_VERYFY_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,127,100,20,10
+    CONTROL         "On",ID_CRC_VERYFY_ON,"Button",BS_AUTORADIOBUTTON,158,100,20,10
+
+    GROUPBOX        "[ Addr. Word-align ]",IDC_STATIC,193,90,74,24
+    CONTROL         "Off",IDC_HEX2BIN_ADDR_ALIGN_WORD_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,205,100,20,10
+    CONTROL         "On",IDC_HEX2BIN_ADDR_ALIGN_WORD_ON,"Button",BS_AUTORADIOBUTTON,235,100,20,10
+
+    GROUPBOX        "[ Max. binary file size(Pad Byte:0xFF)* ]",IDC_STATIC,3,118,140,28
+    EDITTEXT        IDC_HEX2BIN_EDIT_FILESIZE,55,129,50,12,ES_AUTOHSCROLL | ES_NOHIDESEL | 0x200,WS_EX_RIGHT
+    LTEXT           "File size :   ",IDC_STATIC,12,130,40,10
+    LTEXT           "(KByte)",IDC_STATIC_UNIT,110,130,30,10,SS_NOTIFY
+
+    GROUPBOX        "[ Max. File size Unit* ]",IDC_STATIC,148,118,119,28
+    CONTROL         "KByte",ID_UNIT_KBYTES,"Button",BS_AUTORADIOBUTTON | WS_GROUP | NOT WS_TABSTOP,170,130,32,10
+    CONTROL         "Byte",ID_UNIT_BYTE,"Button",BS_AUTORADIOBUTTON,230,130,25,10
+
+
+    GROUPBOX        "[ Swap Wordwise]",IDC_STATIC,3,150,74,24
+    CONTROL         "Off",IDC_HEX2BIN_SWAP_WORDWISE_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,13,160,25,10
+    CONTROL         "On",IDC_HEX2BIN_SWAP_WORDWISE_ON,"Button",BS_AUTORADIOBUTTON,47,160,25,10
+
+    GROUPBOX        "[ Log ]",IDC_STATIC,82,150,61,24
+    CONTROL         "Off",ID_HEX2BIN_LOG_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,92,160,20,10
+    CONTROL         "On",ID_HEX2BIN_LOG_ON,"Button",BS_AUTORADIOBUTTON,118,160,20,10
+
+    GROUPBOX        "[ Hex addr. Zero-forced* ]",IDC_STATIC,148,150,119,24
+    CONTROL         "Real addr.",ID_PHY_ADDR_ZERO_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,160,160,45,10
+    CONTROL         "Zero-Forced",ID_PHY_ADDR_ZERO_ON,"Button",BS_AUTORADIOBUTTON,210,160,50,10
+
+
+#if 0 // 2016.03.10. insert to binary function
+    GROUPBOX		"[ Endian - in Binary ]",IDC_STATIC,175,116,92,24
+    CONTROL 		"Little",ID_ENDIAN_LITTLE,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,188,126,27,10
+    CONTROL 		"Big",ID_ENDIAN_BIG,"Button",BS_AUTORADIOBUTTON,226,126,25,10
+
+    GROUPBOX        "[ CRC Type - in Binary ]",IDC_STATIC,3,146,264,24
+    CONTROL         "CHK8_SUM",ID_CRCTYPE_CHK8_SUM,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,10,156,50,10
+    CONTROL         "CHK16",ID_CRCTYPE_CHK16,"Button",BS_AUTORADIOBUTTON,74,156,37,10
+    CONTROL         "CRC8",ID_CRCTYPE_CRC8,"Button",BS_AUTORADIOBUTTON,123,156,37,10
+    CONTROL         "CRC16",ID_CRCTYPE_CRC16,"Button",BS_AUTORADIOBUTTON,168,156,37,10
+    CONTROL         "CRC32",ID_CRCTYPE_CRC32,"Button",BS_AUTORADIOBUTTON,217,156,37,10
+#endif
+
+END
+
+#endif
+
+
+
+
+#if USE_TXDATA_TO_SERIAL // 2016.03.27
+// -------------------------------------------------
+// -- TxData --------------------------------
+// -------------------------------------------------
+
+IDD_DIALOG4 DIALOGEX 40, 10, 350, 215
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+CAPTION "Tx Data to Serial"
+FONT 10, "System", 0, 0, 0x0
+BEGIN
+
+    DEFPUSHBUTTON   "Clear Screen",ID_TXDATA_CLEAR_SCR,4,180,49,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Send TxData (F6)",IDOK,57,180,106,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Save",ID_TXDATA_SAVE, 168,180,53,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Tx Stop",ID_TXDATA_STOP, 227,180,50,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Exit",IDCANCEL,       283,180,60,30,BS_CENTER | WS_TABSTOP
+
+    GROUPBOX        "[ TxData Type* ]",IDC_STATIC,5,5,187,24
+    CONTROL         "Char",ID_TXDATA_CHAR_MODE,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,20,15,30,10
+    CONTROL         "Hexa",ID_TXDATA_HEXA_MODE,"Button",BS_AUTORADIOBUTTON,60,15,30,10
+    CONTROL         "File",ID_TXDATA_FILE_MODE,"Button",BS_AUTORADIOBUTTON,100,15,40,10
+    CONTROL         "Script",ID_TXDATA_SCRI_MODE,"Button",BS_AUTORADIOBUTTON,140,15,40,10
+
+    GROUPBOX        "[ Message* ]",IDC_STATIC,204,5,140,24
+    CONTROL         "MsgOff",ID_TXDATA_DISPLAY_MSGOFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,225,15,35,10
+    CONTROL         "MsgOn", ID_TXDATA_DISPLAY_MSGON,"Button",BS_AUTORADIOBUTTON,288,15,33,10
+
+    GROUPBOX        "[ Tx Char Type* (Max. 259 Char) -> [F6]Key ]",IDC_STATIC,4,40,340,32
+    EDITTEXT        ID_TXDATA_EDIT_CHAR,10,52,330,14,ES_MULTILINE | ES_AUTOHSCROLL | WS_TABSTOP
+
+    GROUPBOX        "[ Tx Hexa-Decimal Type* -> [F6]Key ]",IDC_STATIC,4,81,340,32
+    EDITTEXT        ID_TXDATA_EDIT_HEXA,10,93,330,14,ES_AUTOHSCROLL | WS_TABSTOP
+
+    GROUPBOX		"[ Tx File (char) / Tx Script File -> in this MENU ]",IDC_STATIC,4,125,340,45
+    DEFPUSHBUTTON	"Tx File",ID_TXDATA_BTN_FILE, 10,139,40,24,BS_CENTER
+    EDITTEXT        ID_TXDATA_EDIT_FILE,55,139,285,11,ES_AUTOHSCROLL | NOT WS_TABSTOP
+    EDITTEXT        ID_TXDATA_DISP_FILE,55,152,285,11,ES_AUTOHSCROLL | NOT WS_TABSTOP
+
+END
+
+#endif
+
+
+#if (RICHED_COLOR) || (TEXT_FIND_MARK) // 2016.09.23
+// -------------------------------------------------
+// -- Text Color  --------------------------------
+// -------------------------------------------------
+IDD_DIALOG5 DIALOGEX 40, 10, 352, 228
+STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU
+EXSTYLE WS_EX_CLIENTEDGE | WS_EX_STATICEDGE
+CAPTION "LOG Text Marking"
+FONT 10, "System", 0, 0, 0x0
+BEGIN
+    DEFPUSHBUTTON   "Clear Screen",ID_COLOR_EDIT_CLEAR,4,193,108,30,BS_CENTER | WS_TABSTOP
+    PUSHBUTTON      "Save",ID_COLOR_EDIT_SAVE,121,193,96,30,BS_CENTER
+    PUSHBUTTON      "Exit",IDCANCEL,228,193,120,30,BS_CENTER
+
+#if TEXT_FIND_MARK // 2016.09.23
+    GROUPBOX        "[ Mark: *** ; Text min. size>=6]",IDC_STATIC,4,4,344,32
+#else
+    GROUPBOX        "[ Red Color String* ; Size>=6]",IDC_STATIC,4,4,344,32
+#endif
+    CONTROL         "Off",ID_COLOR_CHECK_RED_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,275,18,30,10
+    CONTROL         "On",ID_COLOR_CHECK_RED_ON,"Button",BS_AUTORADIOBUTTON,314,18,30,10
+    EDITTEXT        ID_COLOR_EDIT_RED,10,17,250,14,ES_AUTOHSCROLL
+
+
+#if TEXT_FIND_MARK // 2016.09.23
+    GROUPBOX        "[ Mark: >>> ]",IDC_STATIC,4,41,344,32
+#else
+    GROUPBOX        "[ Magenta Color String* ]",IDC_STATIC,4,41,344,32
+#endif
+    CONTROL         "Off",ID_COLOR_CHECK_MAGENTA_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,275,55,30,10
+    CONTROL         "On",ID_COLOR_CHECK_MAGENTA_ON,"Button",BS_AUTORADIOBUTTON,314,55,30,10
+    EDITTEXT        ID_COLOR_EDIT_MAGENTA,10,54,250,14,ES_AUTOHSCROLL
+
+
+#if TEXT_FIND_MARK // 2016.09.23
+    GROUPBOX        "[ Mark: /// ]",IDC_STATIC,4,79,344,32
+#else
+    GROUPBOX        "[ Blue Color String* ]",IDC_STATIC,4,79,344,32
+#endif
+    CONTROL         "Off",ID_COLOR_CHECK_BLUE_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,275,93,30,10
+    CONTROL         "On",ID_COLOR_CHECK_BLUE_ON,"Button",BS_AUTORADIOBUTTON,314,93,30,10
+    EDITTEXT        ID_COLOR_EDIT_BLUE,10,92,250,14,ES_AUTOHSCROLL
+
+
+#if TEXT_FIND_MARK // 2016.09.23
+    GROUPBOX        "[ Mark: <<< ]",IDC_STATIC,4,115,344,32
+#else
+    GROUPBOX        "[ Green Color String* ]",IDC_STATIC,4,115,344,32
+#endif
+    CONTROL         "Off",ID_COLOR_CHECK_GREEN_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,275,129,30,10
+    CONTROL         "On",ID_COLOR_CHECK_GREEN_ON,"Button",BS_AUTORADIOBUTTON,314,129,30,10
+    EDITTEXT        ID_COLOR_EDIT_GREEN,10,128,250,14,ES_AUTOHSCROLL
+
+#if TEXT_FIND_MARK // 2016.09.23
+    GROUPBOX        "[ Mark: $$$ ]",IDC_STATIC,4,152,344,32
+#else
+    GROUPBOX        "[ Yellow Color String* ]",IDC_STATIC,4,152,344,32
+#endif
+    CONTROL         "Off",ID_COLOR_CHECK_YELLOW_OFF,"Button",BS_AUTORADIOBUTTON | WS_GROUP | WS_TABSTOP,275,165,30,10
+    CONTROL         "On",ID_COLOR_CHECK_YELLOW_ON,"Button",BS_AUTORADIOBUTTON,314,165,30,10
+    EDITTEXT        ID_COLOR_EDIT_YELLOW,10,164,250,14,ES_AUTOHSCROLL
+END
+
+#endif
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Version
+//
+#if 0
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 6,11
+ PRODUCTVERSION 6,11,0,0
+ FILEFLAGSMASK 0x3fL
+#ifdef _DEBUG
+ FILEFLAGS 0x1L
+#else
+ FILEFLAGS 0x0L
+#endif
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904e4"
+        BEGIN
+            VALUE "CompanyName", "TOP.JOO"
+            VALUE "FileDescription", "dnw - serial tool"
+            VALUE "FileVersion", 6,11
+            VALUE "InternalName", "dnw.exe"
+            VALUE "LegalCopyright", "TOP.JOO.  All rights reserved."
+            VALUE "OriginalFilename", "dnw.exe"
+            VALUE "ProductName", "dnw"
+            VALUE "ProductVersion", "6.11E"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+#endif
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// DESIGNINFO
+//
+
+#ifdef APSTUDIO_INVOKED
+GUIDELINES DESIGNINFO 
+BEGIN
+    IDD_DIALOG1, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 193
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 13
+    END
+
+    IDD_DIALOG2, DIALOG
+    BEGIN
+        LEFTMARGIN, 7
+        RIGHTMARGIN, 149
+        TOPMARGIN, 7
+        BOTTOMMARGIN, 144
+    END
+END
+#endif    // APSTUDIO_INVOKED
+
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Accelerator
+//
+
+IDR_ACCELERATOR1 ACCELERATORS 
+BEGIN
+    "A",            IDM_EDIT_ALL,             VIRTKEY, CONTROL, NOINVERT
+    "C",            IDM_EDIT_COPY,            VIRTKEY, CONTROL, NOINVERT
+    VK_SPACE,       IDM_EDIT_COPYALL,         VIRTKEY, CONTROL, NOINVERT
+    VK_ESCAPE,      IDM_EXIT,                 VIRTKEY, SHIFT, NOINVERT
+    VK_ESCAPE,      CM_ESCAPE_BTN,            VIRTKEY, NOINVERT
+
+    VK_F2,          IDM_CONNECT_DISCONNECT,   VIRTKEY, NOINVERT
+    VK_F3,          IDM_COMPORT_LIST,         VIRTKEY, NOINVERT
+    VK_F4,          IDM_UMON_TRANSMIT_TO_RAM, VIRTKEY, NOINVERT
+    VK_F5,          CM_LOG_TEXTCOLOR,         VIRTKEY, NOINVERT
+
+    VK_F6,          IDM_SPECIAL_KEY_SEND,     VIRTKEY, NOINVERT
+
+    VK_F9,          IDM_STATUS_KEY_CLEAR,     VIRTKEY, NOINVERT
+    VK_F10,         IDM_ABOUT,                VIRTKEY, NOINVERT
+    VK_F11,         IDM_CLEAR_BUFFER,         VIRTKEY, NOINVERT
+    VK_F12,         IDM_OPTIONS,              VIRTKEY, NOINVERT
+
+
+    VK_F5,          IDM_TEXT_HEXA_MODE,       VIRTKEY, SHIFT, NOINVERT
+
+    VK_F7,          IDM_NK_TO_NAND,           VIRTKEY, SHIFT, NOINVERT
+    VK_F8,          IDM_EBOOT_TO_NAND,        VIRTKEY, SHIFT, NOINVERT
+    VK_F9,          IDM_STEPLDR_TO_NAND,      VIRTKEY, SHIFT, NOINVERT
+    VK_F10,         IDM_USBTRANSMIT,          VIRTKEY, SHIFT, NOINVERT
+    VK_F11,         IDM_UBOOT2,               VIRTKEY, SHIFT, NOINVERT
+
+
+	VK_F6,			IDM_TXDATA2UART,		  VIRTKEY, CONTROL, NOINVERT
+
+
+#if USE_HEX2BIN_CONVERT // 2016.03.04
+    VK_F12,         IDM_HEX2BIN,              VIRTKEY, SHIFT, NOINVERT
+    VK_F12,         IDM_HEX2BIN,              VIRTKEY, CONTROL, NOINVERT
+#endif
+
+    "M",            IDM_CHECKSUM_MD5,         VIRTKEY, ALT, NOINVERT
+    "S",            IDM_CHECKSUM_SHA1,        VIRTKEY, ALT, NOINVERT
+    "D",            IDM_CHECKSUM_SHA2_256,    VIRTKEY, ALT, NOINVERT
+    "F",            IDM_CHECKSUM_SHA2_384,    VIRTKEY, ALT, NOINVERT
+    "G",            IDM_CHECKSUM_SHA2_512,    VIRTKEY, ALT, NOINVERT
+    "J",            IDM_CHECKSUM_SHA2_224,    VIRTKEY, ALT, NOINVERT
+    "K",            IDM_CHECKSUM_MD6,         VIRTKEY, ALT, NOINVERT
+
+    "2",            IDM_CHECKSUM_CRC32,       VIRTKEY, ALT, NOINVERT
+    "4",            IDM_CHECKSUM_CRC64,       VIRTKEY, ALT, NOINVERT
+
+	// Log Save On/Off Hot Key
+    "L",            CM_LOG_SAVE_ON_OFF,       VIRTKEY, CONTROL, ALT, NOINVERT
+    "T",            IDC_TIMESTAMP_HOT_TOGGLE, VIRTKEY, CONTROL, NOINVERT
+
+END
+
+
+#endif    // Korean resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////////////////////
+// English (U.S.) resources
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+/////////////////////////////////////////////////////////////////////////////
+//
+// Menu
+//
+
+IDR_MENU1 MENU 
+BEGIN
+    POPUP "Serial &Port"
+    BEGIN
+        MENUITEM "Connect...\t(F2)",            CM_CONNECT
+        MENUITEM "Transfer File",               CM_TRANSMIT
+        MENUITEM SEPARATOR
+        MENUITEM "Disconnect...\t(F2)",         CM_DISCONNECT
+        MENUITEM "COM port List...\t(F3)",      IDM_COMPORT_LIST
+        MENUITEM SEPARATOR
+        MENUITEM "Exit...\t(Shift+ESC)",        CM_EXIT
+    END // ----- Serial Port ---------
+
+    POPUP "&USB Port"
+    BEGIN
+        POPUP "Transmit..."
+        BEGIN
+            MENUITEM "Transmit...\t(Shift+F10)",    CM_USBTRANSMIT
+            MENUITEM SEPARATOR
+        END
+        POPUP "UBOOT..."
+        BEGIN
+            MENUITEM "UBOOT...\t(Shift+F11)",       CM_UBOOT2
+            MENUITEM SEPARATOR
+        END
+        MENUITEM "Rx Test",                     CM_USBRECEIVE
+        MENUITEM "Status",                      CM_USBSTATUS
+        MENUITEM SEPARATOR
+        MENUITEM "UMON(bl1->iROM boot) Transmit...\t(F4)", CM_RAM_USBTRANSMIT_BL1
+        MENUITEM SEPARATOR
+        MENUITEM "UBOOT 1st(Eboot)...\t(Shift+F7)",   CM_ROM_UBOOT2_1ST
+        MENUITEM "UBOOT 2nd(StepLdr)...\t(Shift+F8)", CM_ROM_UBOOT2_2ND
+        MENUITEM "UBOOT 3rd(NK)...\t(Shift+F9)",      CM_ROM_UBOOT2_3RD
+    END // ----- USB Port ---------
+
+	POPUP "C&onfiguration"
+	BEGIN
+		MENUITEM "Options...\t(F12)",                   CM_OPTIONS
+		MENUITEM SEPARATOR
+		MENUITEM "Clear Screen Buffer...\t(F11)",       CM_CLEAR_BUF
+		MENUITEM SEPARATOR
+		MENUITEM "Select All...\t(Ctrl+A)",             IDM_EDIT_ALL
+		MENUITEM "Copy...\t(Ctrl+C)",                   IDM_EDIT_COPY
+		MENUITEM "Select all+Copy...\t(Ctrl+SPACE)",    IDM_EDIT_COPYALL
+		MENUITEM SEPARATOR
+		MENUITEM "Save LOG (toggle)...\t(Ctrl+Alt+L)",	IDM_LOG_SAVE_ON_OFF
+		MENUITEM SEPARATOR
+		MENUITEM "Display Date/Time...\t(Ctrl+T)",		IDC_TIMESTAMP_HOT_TOGGLE
+		MENUITEM SEPARATOR
+		MENUITEM "Clear Status Bar On/Off...\t(F9)",	IDM_STATUS_KEY_CLEAR
+
+	END // ----- Configuration ---------
+
+
+	POPUP "Tools"
+	BEGIN
+
+#if USE_HEX2BIN_CONVERT // 2016.03.04
+		MENUITEM "Convert Hex2Bin...\t(Ctrl+F12)", 				CM_HEX2BIN
+#endif
+		MENUITEM SEPARATOR
+
+		POPUP "Checksum"
+		BEGIN
+			MENUITEM "MD5...(32B)\t(Alt+M)",         		CM_CHECKSUM_MD5
+			MENUITEM "SHA1...(40B)\t(Alt+S)",      			CM_CHECKSUM_SHA1  
+			POPUP "SHA2/MD6..."
+			BEGIN
+				MENUITEM "SHA2-256...(64B)\t(Alt+D)",		CM_CHECKSUM_SHA2_256 
+				MENUITEM "SHA2-384...(96B)\t(Alt+F)",		CM_CHECKSUM_SHA2_384 
+				MENUITEM "SHA2-512...(128B)\t(Alt+G)",		CM_CHECKSUM_SHA2_512 
+				MENUITEM "SHA2-224...(56B)\t(Alt+J)",		CM_CHECKSUM_SHA2_224 
+				MENUITEM "MD6...(64B)\t(Alt+K)",			CM_CHECKSUM_MD6
+			END
+			MENUITEM SEPARATOR
+			MENUITEM "CRC32...(8B)\t(Alt+2)", 				CM_CHECKSUM_CRC32
+			MENUITEM "CRC64...(16B)\t(Alt+4)", 				CM_CHECKSUM_CRC64
+			MENUITEM SEPARATOR
+			MENUITEM "View checksum",						CM_CHECKSUM_VIEW_CHECKSUM_FILE
+
+#if SHELL_COMMAND // 2016.02.18
+			MENUITEM SEPARATOR
+			MENUITEM "Shell Command",				 		CM_CHECKSUM_SHELL_CMD
+#endif
+		END // Checksum
+
+		MENUITEM SEPARATOR
+
+#if USE_TXDATA_TO_SERIAL // 2016.10.07
+		MENUITEM "TxData to Serial...\t(Ctrl+F6)", 	        CM_TXDATA2UART
+		MENUITEM "View/Edit TxData Script file",			CM_EDIT_TXDATA_SCRIPT_FILE
+		MENUITEM SEPARATOR
+#endif
+		
+#if RICHED_COLOR 
+		MENUITEM SEPARATOR
+		MENUITEM "LOG text color...\t(F5)",					CM_LOG_TEXTCOLOR
+#endif
+
+#if TEXT_FIND_MARK // 2016.09.23
+		MENUITEM SEPARATOR
+		MENUITEM "LOG text Marking...\t(F5)", 				CM_LOG_TEXTCOLOR
+#endif
+
+	END // ----- Tool ---------
+
+
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "About",                       CM_ABOUT
+    END
+
+END
+
+#endif    // English (U.S.) resources
+/////////////////////////////////////////////////////////////////////////////
+
+
+
+#ifndef APSTUDIO_INVOKED
+/////////////////////////////////////////////////////////////////////////////
+//
+// Generated from the TEXTINCLUDE 3 resource.
+//
+
+
+/////////////////////////////////////////////////////////////////////////////
+#endif    // not APSTUDIO_INVOKED
+
+
+
+
