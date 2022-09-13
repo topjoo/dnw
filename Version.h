@@ -30,8 +30,10 @@
 #define BUILD_MSC_VER 	TEXT("/VS2019")
 #elif _MSC_VER == 1930
 #define BUILD_MSC_VER 	TEXT("/VS2022")
+#elif _MSC_VER == 1933
+#define BUILD_MSC_VER 	TEXT("/VS2022")
 #else
-#define BUILD_MSC_VER 	TEXT("/VS????")
+#define BUILD_MSC_VER 	TEXT("/VS202?")
 #endif
 
 

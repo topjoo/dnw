@@ -1257,7 +1257,7 @@ void MenuAbout(HWND hwnd)
 	EB_Printf(TEXT("[dnw] sizeof(long long) = %d \r\n"), sizeof(long long) );
 	#endif
 	
-	EB_Printf(TEXT("[dnw] Version  ----------: %s [Build: %s, %s]%s \r\n"), APPNAME, __DATE__ , __TIME__ , BUILD_MSC_VER); // , _MSC_VER);
+	EB_Printf(TEXT("[dnw] Version  ----------: %s [Build: %s, %s]%s(%d) \r\n"), APPNAME, __DATE__ , __TIME__ , BUILD_MSC_VER, _MSC_VER ); // , _MSC_VER);
 	EB_Printf(TEXT("[dnw] Email addr. -------: %s \r\n"), REG_AUTHOR1_ID_TEXT );
 	EB_Printf(TEXT("[dnw] NAVER Cafe --------: https://cafe.naver.com/topjoo \r\n") );
 	EB_Printf(TEXT("[dnw] ---------------------------------------------------------------------------------- \r\n") );
