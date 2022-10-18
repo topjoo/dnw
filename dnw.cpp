@@ -1,4 +1,4 @@
-// -------------------------------
+// ----------------------------
 // dnw.cpp
 // -------------------------------
 
@@ -1182,7 +1182,6 @@ void MenuAbout(HWND hwnd)
 	EB_Printf(TEXT("[dnw] OS Release ID -----: %s (Build#:%s) \r\n"), SWReleaseId, SWCurrentBuildNumber );
 
 
-
 	if( dwOnce )
 	{
 		LinuxCount2Date(SWInstallDate, &dwyear, &dwmonth, &dwday, &dwhour, &dwmin, &dwsec);
@@ -1197,7 +1196,7 @@ void MenuAbout(HWND hwnd)
 	EB_Printf(TEXT("[dnw] BIOS Vendor -------: %s \r\n"), BIOSVendor_ );
 	EB_Printf(TEXT("[dnw] BIOS Release Date -: %s \r\n"), BIOSRelease );
 
-	//EB_Printf(TEXT("[dnw] OS Info. ----------: %s \r\n"), os_name() );
+	//EB_Printf(TEXT("[dnw] OS Info. -2--------: %s \r\n"), os_name() );
 
 //	EB_Printf(TEXT("[dnw] IP Address --------: %s \r\n"), GetIPaddress() );
 

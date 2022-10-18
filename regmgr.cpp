@@ -2214,6 +2214,19 @@ char *os_name(void)
 		return NULL;
 	}
 
+#if 0
+{
+	TCHAR szText[2048] = {0,};
+		
+	wsprintf(szText, TEXT("[dnw]  %d.%d.%d (%s) \r\n"), osInfo.dwMajorVersion, osInfo.dwMinorVersion, osInfo.dwBuildNumber&0xFFFF, osInfo.szCSDVersion );
+
+	MessageBox(NULL, szText, TEXT("About DNW"), MB_OK | MB_ICONINFORMATION );
+
+}
+#endif
+
+
+
 	if(osInfo.dwMajorVersion <=  4)	   /// { strcpy(OSbuf, "Windows NT"); }
 	{
 		sprintf(OSbuf, "Windows NT %d.%d.%d", osInfo.dwMajorVersion , osInfo.dwMinorVersion, osInfo.dwBuildNumber&0xFFFF);
